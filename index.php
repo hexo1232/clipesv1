@@ -51,7 +51,7 @@ $lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM ca
 $filtros  = [];
 $sql_base = "FROM video v
              LEFT JOIN video_imagem vi ON v.id_video = vi.id_video AND vi.imagem_principal = true
-             WHERE v.ativo = 1";
+             WHERE v.ativo = true"; 
 
 if (!empty($_GET['categoria'])) {
     $sql_base .= " AND EXISTS (SELECT 1 FROM video_categoria vc WHERE vc.id_video = v.id_video AND vc.id_categoria = ?)";
