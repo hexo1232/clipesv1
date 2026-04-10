@@ -40,12 +40,14 @@ $stmt->execute([$entrada, $entrada]);
         }
 
         // 3. Terceira Prioridade: Redirecionamento padrão por perfil
-        if ((int)$usuario['idperfil'] === 1) {
-            header("Location: dashboard.php");
-        } else {
-            header("Location: index.php");
-        }
-        exit;
+    $idPerfil = (int)$usuario['idperfil'];
+
+if ($idPerfil === 1) {
+    header("Location: dashboard.php");
+} else {
+    header("Location: index.php");
+}
+exit;
 
     } else {
         $erro = "Senha incorreta.";
