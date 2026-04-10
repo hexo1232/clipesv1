@@ -33,7 +33,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nome_video              = trim($_POST['nome_video']  ?? '');
     $descricao               = trim($_POST['descricao']   ?? '');
     $preco                   = floatval($_POST['preco']   ?? 0);
-    $duracao                 = trim($_POST['duracao']     ?? '');
+   $duracao_raw = trim($_POST['duracao'] ?? '');
+    $duracao = !empty($duracao_raw) ? $duracao_raw : null;
     $categorias_selecionadas = $_POST['categorias']       ?? [];
     $caminho_previa          = trim($_POST['url_previa']  ?? '');
     $caminho_imagem          = trim($_POST['url_imagem']  ?? '');
