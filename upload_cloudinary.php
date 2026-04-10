@@ -1,8 +1,13 @@
 <?php
-// upload_cloudinary.php
-// Recebe um ficheiro por vez (video ou imagem), faz upload para a Cloudinary
-// e devolve a URL segura em JSON. Chamado pelo JS antes de submeter o formulário.
-
+session_start();
+header('Content-Type: application/json');
+echo json_encode([
+    'debug_session' => session_id(),
+    'usuario'       => $_SESSION['usuario'] ?? 'NAO AUTENTICADO',
+    'post_tipo'     => $_POST['tipo'] ?? 'sem tipo',
+    'file_recebido' => isset($_FILES['arquivo']) ? $_FILES['arquivo']['name'] : 'nenhum',
+]);
+exit;
 include "verifica_login.php";
 include "conexao.php";
 
