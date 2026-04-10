@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $mensagem = "⚠️ A imagem de destaque é obrigatória.";
         $tipo_mensagem = "error";
     } else {
-        $conexao->begin_transaction();
+      $conexao->beginTransaction();
         try {
             $dir_previa = "uploads/videos/previas/";
             if (!is_dir($dir_previa)) mkdir($dir_previa, 0777, true);
@@ -74,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_video = $conexao->prepare($sql_video);
             $stmt_video->bind_param("ssdssi", $nome_video, $descricao, $preco, $duracao, $caminho_previa, $usuario['id_usuario']);
             $stmt_video->execute();
-            $id_video = $stmt_video->insert_id;
+               $id_video = $conexao->lastInsertId();
 
             $stmt_cat = $conexao->prepare("INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)");
             foreach ($categorias_selecionadas as $id_categoria) {

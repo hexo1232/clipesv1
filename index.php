@@ -1,5 +1,5 @@
 <?php
-// ver_videos.php
+// index.php
 include "conexao.php";
 include "verifica_login_opcional.php";
 
@@ -7,135 +7,96 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 
 $usuarioLogado = $_SESSION['usuario'] ?? null;
-$id_perfil = $usuarioLogado['idperfil'] ?? null;
-$idUsuario = $usuarioLogado['id_usuario'] ?? null;
+$id_perfil     = $usuarioLogado['idperfil'] ?? null;
+$idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
-// SEU CONTATO DO WHATSAPP - CONFIGURE AQUI
-$WHATSAPP_NUMBER = "876821594"; // ← INSIRA O NÚMERO AQUI
+$WHATSAPP_NUMBER = "876821594";
 
-// Carregar categorias para filtro
-$categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria");
-
-$filtros = [];
-$tipos_bind = "";
-
-$sql_base = "FROM video v
-LEFT JOIN video_imagem vi ON v.id_video = vi.id_video AND vi.imagem_principal = 1
-WHERE v.ativo = 1";
-
-if (!empty($_GET['categoria'])) {
-    $sql_base .= " AND EXISTS (SELECT 1 FROM video_categoria vc WHERE vc.id_video = v.id_video AND vc.id_categoria = ?)";
-    $tipos_bind .= "i";
-    $filtros[] = $_GET['categoria'];
-}
-
-if (!empty($_GET['busca'])) {
-    $busca = "%" . trim($_GET['busca']) . "%";
-    $sql_base .= " AND (v.nome_video LIKE ? OR v.descricao LIKE ?)";
-    $tipos_bind .= "ss";
-    $filtros[] = $busca;
-    $filtros[] = $busca;
-}
-
-if (!empty($_GET['duracao_min'])) {
-    $sql_base .= " AND TIME_TO_SEC(v.duracao) >= ?";
-    $tipos_bind .= "i";
-    $filtros[] = intval($_GET['duracao_min']) * 60;
-}
-
-if (!empty($_GET['duracao_max'])) {
-    $sql_base .= " AND TIME_TO_SEC(v.duracao) <= ?";
-    $tipos_bind .= "i";
-    $filtros[] = intval($_GET['duracao_max']) * 60;
-}
-
-if (!empty($_GET['preco_min'])) {
-    $sql_base .= " AND v.preco >= ?";
-    $tipos_bind .= "d";
-    $filtros[] = floatval($_GET['preco_min']);
-}
-
-if (!empty($_GET['preco_max'])) {
-    $sql_base .= " AND v.preco <= ?";
-    $tipos_bind .= "d";
-    $filtros[] = floatval($_GET['preco_max']);
-}
-
-$limite = 12;
-$pagina_atual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
-if ($pagina_atual < 1) $pagina_atual = 1;
-$offset = ($pagina_atual - 1) * $limite;
-
-$sql_count = "SELECT COUNT(*) AS total " . $sql_base;
-$stmt_count = $conexao->prepare($sql_count);
-if (!empty($filtros)) {
-    $bind_args = array_merge([$tipos_bind], $filtros);
-    call_user_func_array([$stmt_count, 'bind_param'], array_by_ref($bind_args));
-}
-$stmt_count->execute();
-$total_registros = $stmt_count->get_result()->fetch_assoc()['total'];
-$total_paginas = ceil($total_registros / $limite);
-
-$sql = "SELECT v.*, vi.caminho_imagem " . $sql_base . " ORDER BY v.data_cadastro DESC LIMIT ? OFFSET ?";
-$stmt = $conexao->prepare($sql);
-$tipos_completo = $tipos_bind . "ii";
-$parametros = array_merge($filtros, [$limite, $offset]);
-if (!empty($parametros)) {
-    $bind_args = array_merge([$tipos_completo], $parametros);
-    call_user_func_array([$stmt, 'bind_param'], array_by_ref($bind_args));
-}
-
-function array_by_ref(&$arr) {
-    $refs = [];
-    foreach ($arr as $key => $value) $refs[$key] = &$arr[$key];
-    return $refs;
-}
-
-$stmt->execute();
-$resultado = $stmt->get_result();
-
+// ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
     header('Content-Type: application/json');
     $idVideo = intval($_POST['id_video']);
-    $ip = $_SERVER['REMOTE_ADDR'];
+    $ip      = $_SERVER['REMOTE_ADDR'];
 
     if ($idUsuario) {
         $stmt = $conexao->prepare("SELECT id_download FROM video_download_previa WHERE id_video = ? AND id_usuario = ?");
-        $stmt->bind_param("ii", $idVideo, $idUsuario);
+        $stmt->execute([$idVideo, $idUsuario]);
     } else {
         $stmt = $conexao->prepare("SELECT id_download FROM video_download_previa WHERE id_video = ? AND ip_address = ? AND id_usuario IS NULL");
-        $stmt->bind_param("is", $idVideo, $ip);
+        $stmt->execute([$idVideo, $ip]);
     }
 
-    $stmt->execute();
-    $resultado_check = $stmt->get_result();
+    if ($stmt->rowCount() == 0) {
+        $conexao->prepare("INSERT INTO video_download_previa (id_video, id_usuario, ip_address) VALUES (?, ?, ?)")
+                ->execute([$idVideo, $idUsuario, $ip]);
 
-    if ($resultado_check->num_rows == 0) {
-        $stmtInsert = $conexao->prepare("INSERT INTO video_download_previa (id_video, id_usuario, ip_address) VALUES (?, ?, ?)");
-        $stmtInsert->bind_param("iis", $idVideo, $idUsuario, $ip);
-        $stmtInsert->execute();
-
-        $stmtUpdate = $conexao->prepare("UPDATE video SET visualizacoes = visualizacoes + 1 WHERE id_video = ?");
-        $stmtUpdate->bind_param("i", $idVideo);
-        $stmtUpdate->execute();
+        $conexao->prepare("UPDATE video SET visualizacoes = visualizacoes + 1 WHERE id_video = ?")
+                ->execute([$idVideo]);
 
         $stmtCount = $conexao->prepare("SELECT visualizacoes FROM video WHERE id_video = ?");
-        $stmtCount->bind_param("i", $idVideo);
-        $stmtCount->execute();
-        $novoTotal = $stmtCount->get_result()->fetch_assoc()['visualizacoes'];
-
-        echo json_encode(['success' => true, 'visualizacoes' => $novoTotal]);
+        $stmtCount->execute([$idVideo]);
+        echo json_encode(['success' => true, 'visualizacoes' => $stmtCount->fetchColumn()]);
     } else {
         $stmtCount = $conexao->prepare("SELECT visualizacoes FROM video WHERE id_video = ?");
-        $stmtCount->bind_param("i", $idVideo);
-        $stmtCount->execute();
-        $total = $stmtCount->get_result()->fetch_assoc()['visualizacoes'];
-        echo json_encode(['success' => true, 'already_viewed' => true, 'visualizacoes' => $total]);
+        $stmtCount->execute([$idVideo]);
+        echo json_encode(['success' => true, 'already_viewed' => true, 'visualizacoes' => $stmtCount->fetchColumn()]);
     }
     exit;
 }
-?>
 
+// ── Categorias para filtro ──
+$lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria")->fetchAll();
+
+// ── Montar query base com filtros ──
+$filtros  = [];
+$sql_base = "FROM video v
+             LEFT JOIN video_imagem vi ON v.id_video = vi.id_video AND vi.imagem_principal = true
+             WHERE v.ativo = 1";
+
+if (!empty($_GET['categoria'])) {
+    $sql_base .= " AND EXISTS (SELECT 1 FROM video_categoria vc WHERE vc.id_video = v.id_video AND vc.id_categoria = ?)";
+    $filtros[] = $_GET['categoria'];
+}
+if (!empty($_GET['busca'])) {
+    $busca     = "%" . trim($_GET['busca']) . "%";
+    $sql_base .= " AND (v.nome_video ILIKE ? OR v.descricao ILIKE ?)";
+    $filtros[] = $busca;
+    $filtros[] = $busca;
+}
+if (!empty($_GET['duracao_min'])) {
+    $sql_base .= " AND EXTRACT(EPOCH FROM v.duracao::interval) >= ?";
+    $filtros[] = intval($_GET['duracao_min']) * 60;
+}
+if (!empty($_GET['duracao_max'])) {
+    $sql_base .= " AND EXTRACT(EPOCH FROM v.duracao::interval) <= ?";
+    $filtros[] = intval($_GET['duracao_max']) * 60;
+}
+if (!empty($_GET['preco_min'])) {
+    $sql_base .= " AND v.preco >= ?";
+    $filtros[] = floatval($_GET['preco_min']);
+}
+if (!empty($_GET['preco_max'])) {
+    $sql_base .= " AND v.preco <= ?";
+    $filtros[] = floatval($_GET['preco_max']);
+}
+
+// ── Paginação ──
+$limite       = 12;
+$pagina_atual = max(1, (int)($_GET['pagina'] ?? 1));
+$offset       = ($pagina_atual - 1) * $limite;
+
+// ── Contagem total ──
+$stmt_count = $conexao->prepare("SELECT COUNT(*) " . $sql_base);
+$stmt_count->execute($filtros);
+$total_registros = (int) $stmt_count->fetchColumn();
+$total_paginas   = ceil($total_registros / $limite);
+
+// ── Buscar vídeos ──
+$stmt = $conexao->prepare("SELECT v.*, vi.caminho_imagem " . $sql_base . " ORDER BY v.data_cadastro DESC LIMIT ? OFFSET ?");
+$stmt->execute(array_merge($filtros, [$limite, $offset]));
+$videos           = $stmt->fetchAll();
+$total_encontrados = count($videos);
+?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -145,8 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
 <style>
-
-/* ── Botão WhatsApp ── */
 .btn-whatsapp {
     background: linear-gradient(135deg, #25D366, #128C7E);
     color: white;
@@ -155,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     background: linear-gradient(135deg, #128C7E, #075E54);
 }
 
-/* ── Info Toast (canto inferior direito) ── */
 #infoToast {
     position: fixed;
     bottom: 24px;
@@ -175,19 +133,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     font-size: 0.88rem;
     line-height: 1.5;
 }
-
 @keyframes slideInToast {
     from { opacity: 0; transform: translateY(30px); }
     to   { opacity: 1; transform: translateY(0); }
 }
-
 #infoToast .toast-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
 }
-
 #infoToast .toast-title {
     font-weight: 700;
     font-size: 0.95rem;
@@ -196,7 +151,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     align-items: center;
     gap: 6px;
 }
-
 #infoToast .toast-close {
     background: none;
     border: none;
@@ -208,7 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     transition: color 0.2s;
 }
 #infoToast .toast-close:hover { color: #fff; }
-
 #infoToast .toast-row {
     display: flex;
     align-items: center;
@@ -217,16 +170,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     border-radius: 8px;
     padding: 8px 10px;
 }
-
 #infoToast .toast-row i {
     font-size: 1.2rem;
     min-width: 20px;
     text-align: center;
 }
-
 #infoToast .toast-row.whatsapp i { color: #25D366; }
 #infoToast .toast-row.telegram  i { color: #2AABEE; }
-
 #infoToast .toast-row span strong {
     display: block;
     font-size: 0.82rem;
@@ -234,16 +184,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     font-weight: 600;
     margin-bottom: 1px;
 }
-
-/* ocultar toast */
-#infoToast.hidden {
-    display: none;
-}
+#infoToast.hidden { display: none; }
 </style>
 </head>
 <body>
 
-<!-- ── Info Toast ── -->
+<!-- Toast -->
 <div id="infoToast">
     <div class="toast-header">
         <span class="toast-title">
@@ -253,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
             <i class="fas fa-xmark"></i>
         </button>
     </div>
-
     <div class="toast-row whatsapp">
         <i class="fab fa-whatsapp"></i>
         <span>
@@ -261,7 +206,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
             All purchases are negotiated via WhatsApp.
         </span>
     </div>
-
     <div class="toast-row telegram">
         <i class="fab fa-telegram"></i>
         <span>
@@ -300,6 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
         <h2><i class="fas fa-filter"></i> Filtros de Busca</h2>
         <form method="get">
             <div class="filter-grid">
+
                 <div class="filter-group">
                     <label>Buscar Vídeo</label>
                     <input type="text" name="busca" placeholder="Nome do vídeo..."
@@ -310,12 +255,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
                     <label>Categoria</label>
                     <select name="categoria">
                         <option value="">Todas</option>
-                        <?php $categorias->data_seek(0); while ($cat = $categorias->fetch_assoc()): ?>
+                        <?php foreach ($lista_categorias as $cat): ?>
                             <option value="<?= $cat['id_categoria'] ?>"
-                                    <?= isset($_GET['categoria']) && $_GET['categoria'] == $cat['id_categoria'] ? 'selected' : '' ?>>
+                                <?= isset($_GET['categoria']) && $_GET['categoria'] == $cat['id_categoria'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($cat['nome_categoria']) ?>
                             </option>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -342,8 +287,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
                     <input type="number" name="preco_max" placeholder="Ex: 100" min="0" step="0.01"
                            value="<?= htmlspecialchars($_GET['preco_max'] ?? '') ?>">
                 </div>
-            </div>
 
+            </div>
             <div class="filter-buttons">
                 <button type="submit" class="btn-filter btn-primary">
                     <i class="fas fa-search"></i> Pesquisar
@@ -356,22 +301,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
     </div>
 
     <div class="count">
-        <i class="fas fa-video"></i> <?= $resultado->num_rows ?> vídeo(s) encontrado(s)
+        <i class="fas fa-video"></i> <?= $total_encontrados ?> vídeo(s) encontrado(s)
     </div>
 
     <!-- Grid de Vídeos -->
     <div class="videos-grid">
-        <?php while ($v = $resultado->fetch_assoc()): ?>
+        <?php foreach ($videos as $v): ?>
             <div class="video-card">
                 <div class="video-thumbnail-wrapper">
-                    <?php if ($v['caminho_imagem'] && file_exists($v['caminho_imagem'])): ?>
+                    <?php if (!empty($v['caminho_imagem']) && file_exists($v['caminho_imagem'])): ?>
                         <img src="<?= $v['caminho_imagem'] ?>" alt="Thumbnail" class="video-thumbnail">
                     <?php else: ?>
                         <div class="video-thumbnail" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                     <?php endif; ?>
 
                     <div class="price-badge">$<?= number_format($v['preco'], 2) ?></div>
-                    <?php if ($v['duracao']): ?>
+                    <?php if (!empty($v['duracao'])): ?>
                         <div class="duration-badge">
                             <i class="far fa-clock"></i> <?= $v['duracao'] ?>
                         </div>
@@ -402,26 +347,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
                             );
                             $link_whatsapp = "https://wa.me/" . $WHATSAPP_NUMBER . "?text=" . $mensagem_whatsapp;
                         ?>
-
                         <a href="<?= $link_whatsapp ?>" target="_blank" class="action-btn btn-whatsapp">
                             <i class="fab fa-whatsapp"></i> WhatsApp
                         </a>
-
                         <a href="<?= $link_whatsapp ?>" target="_blank" class="action-btn btn-pay">
                             <i class="fas fa-credit-card"></i> Buy Now
                         </a>
                     </div>
                 </div>
             </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </div>
 
     <?php if ($total_paginas > 1): ?>
         <div class="pagination">
             <?php for ($i = 1; $i <= $total_paginas; $i++):
-                $params = $_GET;
+                $params          = $_GET;
                 $params['pagina'] = $i;
-                $url = '?' . http_build_query($params);
+                $url             = '?' . http_build_query($params);
             ?>
                 <a href="<?= $url ?>" class="<?= $i == $pagina_atual ? 'active' : '' ?>">
                     <?= $i ?>
@@ -429,6 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
             <?php endfor; ?>
         </div>
     <?php endif; ?>
+
 </div>
 
 <!-- Modal do Player -->
@@ -442,15 +386,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizaca
 </div>
 
 <script>
-// ── Toast: aparece após 1.5 s e fecha ao clicar no X ──
 function dismissToast() {
     const toast = document.getElementById('infoToast');
-    toast.style.animation = 'none';
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(30px)';
+    toast.style.animation  = 'none';
+    toast.style.opacity    = '0';
+    toast.style.transform  = 'translateY(30px)';
     toast.style.transition = 'opacity 0.3s, transform 0.3s';
     setTimeout(() => toast.classList.add('hidden'), 300);
-    // Guardar preferência para não mostrar de novo na sessão
     sessionStorage.setItem('toastDismissed', '1');
 }
 
@@ -464,8 +406,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ── Toggle Filtros ──
-const filterToggle = document.getElementById('filterToggle');
+// Toggle Filtros
+const filterToggle    = document.getElementById('filterToggle');
 const filtersContainer = document.getElementById('filtersContainer');
 
 filterToggle.addEventListener('click', function () {
@@ -475,7 +417,7 @@ filterToggle.addEventListener('click', function () {
     span.textContent = filtersContainer.classList.contains('show') ? 'Ocultar Filtros' : 'Mostrar Filtros';
 });
 
-// ── Preview ──
+// Preview
 function abrirPreview(idVideo, caminho) {
     document.getElementById('modalPreview').style.display = 'block';
     document.getElementById('videoSource').src = caminho;
@@ -500,8 +442,7 @@ function fecharPreview() {
 }
 
 window.onclick = function (event) {
-    const modal = document.getElementById('modalPreview');
-    if (event.target == modal) fecharPreview();
+    if (event.target == document.getElementById('modalPreview')) fecharPreview();
 };
 
 document.addEventListener('keydown', function (event) {
