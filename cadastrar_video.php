@@ -4,6 +4,7 @@ include "verifica_login.php";
 include "conexao.php"; // Deve ser a versão PDO que configuramos
 include "info_usuario.php";
 
+$conexao->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -23,7 +24,7 @@ $lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM ca
 
 // ── Processar POST ──
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
+
     if (empty($_POST) && empty($_FILES) && $_SERVER['CONTENT_LENGTH'] > 0) {
         $mensagem = "❌ O arquivo é grande demais para o servidor processar.";
         $tipo_mensagem = "error";
@@ -81,9 +82,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 throw new Exception("Erro ao fazer upload da imagem.");
 
             // ── Inserir vídeo ──
-            $stmt_video = $conexao->prepare("INSERT INTO video (nome_video, descricao, preco, duracao, caminho_previa, id_usuario) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt_video->execute([$nome_video, $descricao, $preco, $duracao, $caminho_previa, $usuario['id_usuario']]);
-            $id_video = $conexao->lastInsertId();
+     $stmt_video = $conexao->prepare("
+    INSERT INTO video (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
+    VALUES (?, ?, ?, ?, ?, ?)
+    RETURNING id_video
+");
+$stmt_video->execute([$nome_video, $descricao, $preco, $duracao, $caminho_previa, $usuario['id_usuario']]);
+
+$id_video = $stmt_video->fetchColumn();
 
             // ── Inserir categorias ──
             $stmt_cat = $conexao->prepare("INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)");
