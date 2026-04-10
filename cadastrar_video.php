@@ -1,11 +1,10 @@
 <?php
 // cadastrar_video.php
 include "verifica_login.php";
-include "conexao.php"; // Deve ser a versão PDO que configuramos
+include "conexao.php";
 include "info_usuario.php";
 
 $conexao->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$cloudinary = require __DIR__ . '/config/cloudinary.php';
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -21,83 +20,76 @@ $tipo_mensagem = "info";
 $redirecionar  = false;
 
 // ── Categorias para o formulário ──
-$lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria")->fetchAll();
+$lista_categorias = $conexao
+    ->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria")
+    ->fetchAll();
 
 // ── Processar POST ──
+// Nesta arquitectura o JS já fez os uploads para a Cloudinary e envia
+// apenas as URLs (url_previa, url_imagem) + os campos de texto do formulário.
+// Os ficheiros binários já NÃO chegam aqui.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    if (empty($_POST) && empty($_FILES) && $_SERVER['CONTENT_LENGTH'] > 0) {
-        $mensagem = "❌ O arquivo é grande demais para o servidor processar.";
-        $tipo_mensagem = "error";
-    }
-    
+    $nome_video              = trim($_POST['nome_video']  ?? '');
+    $descricao               = trim($_POST['descricao']   ?? '');
+    $preco                   = floatval($_POST['preco']   ?? 0);
+    $duracao                 = trim($_POST['duracao']     ?? '');
+    $categorias_selecionadas = $_POST['categorias']       ?? [];
+    $caminho_previa          = trim($_POST['url_previa']  ?? '');
+    $caminho_imagem          = trim($_POST['url_imagem']  ?? '');
 
-    $nome_video              = trim($_POST['nome_video'] ?? '');
-    $descricao               = trim($_POST['descricao'] ?? '');
-    $preco                   = floatval($_POST['preco'] ?? 0);
-    $duracao                 = trim($_POST['duracao'] ?? '');
-    $categorias_selecionadas = $_POST['categorias'] ?? [];
-    $arquivo_previa          = $_FILES['video_previa'] ?? null;
-    $arquivo_imagem          = $_FILES['imagem_destaque'] ?? null;
-
-    if (empty($nome_video) || empty($categorias_selecionadas)) {
-        $mensagem      = "⚠️ Nome do vídeo e pelo menos uma categoria são obrigatórios.";
+    // ── Validações ──
+    if (empty($nome_video)) {
+        $mensagem      = "⚠️ O nome do vídeo é obrigatório.";
         $tipo_mensagem = "error";
-  } elseif (!isset($arquivo_previa) || $arquivo_previa['error'] != UPLOAD_ERR_OK) {
-    // MODIFICAÇÃO PARA DEBUG:
-$erro_codigo = $arquivo_previa['error'] ?? null;
-    $mensagem      = "⚠️ Erro no upload da prévia. Código do erro PHP: " . $erro_codigo;
-    $tipo_mensagem = "error";
-    } elseif (!isset($arquivo_imagem) || $arquivo_imagem['error'] != UPLOAD_ERR_OK) {
-        $mensagem      = "⚠️ A imagem de destaque é obrigatória.";
+    } elseif (empty($categorias_selecionadas)) {
+        $mensagem      = "⚠️ Selecione pelo menos uma categoria.";
+        $tipo_mensagem = "error";
+    } elseif (empty($caminho_previa)) {
+        $mensagem      = "⚠️ A URL da prévia não foi recebida. Tente novamente.";
+        $tipo_mensagem = "error";
+    } elseif (empty($caminho_imagem)) {
+        $mensagem      = "⚠️ A URL da imagem não foi recebida. Tente novamente.";
         $tipo_mensagem = "error";
     } else {
+        // ── Gravar na base de dados ──
         $conexao->beginTransaction();
         try {
-            // ── Upload da prévia ──
-      
-// ── Upload da prévia (VÍDEO) ──
-$resultVideo = $cloudinary->uploadApi()->upload(
-    $arquivo_previa['tmp_name'],
-    [
-        "resource_type" => "video",
-        "folder" => "videos/previas"
-    ]
-);
+            // Inserir vídeo e obter o id gerado
+            $stmt_video = $conexao->prepare("
+                INSERT INTO video
+                    (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
+                VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING id_video
+            ");
+            $stmt_video->execute([
+                $nome_video,
+                $descricao,
+                $preco,
+                $duracao,
+                $caminho_previa,
+                $usuario['id_usuario'],
+            ]);
+            $row      = $stmt_video->fetch(PDO::FETCH_ASSOC);
+            $id_video = $row['id_video'];
 
-$caminho_previa = $resultVideo['secure_url'];
-
-
-// ── Upload da imagem ──
-$resultImage = $cloudinary->uploadApi()->upload(
-    $arquivo_imagem['tmp_name'],
-    [
-        "resource_type" => "image",
-        "folder" => "videos/imagens"
-    ]
-);
-
-$caminho_imagem = $resultImage['secure_url'];           // ── Inserir vídeo ──
-
-
-$stmt_video = $conexao->prepare("
-    INSERT INTO video (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
-    VALUES (?, ?, ?, ?, ?, ?)
-    RETURNING id_video
-");
-$stmt_video->execute([$nome_video, $descricao, $preco, $duracao, $caminho_previa, $usuario['id_usuario']]);
-$row = $stmt_video->fetch(PDO::FETCH_ASSOC); // fetch() em vez de fetchColumn()
-$id_video = $row['id_video'];
-
-            // ── Inserir categorias ──
-            $stmt_cat = $conexao->prepare("INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)");
-            foreach ($categorias_selecionadas as $id_categoria) {
-                $stmt_cat->execute([$id_video, $id_categoria]);
+            if (empty($id_video)) {
+                throw new Exception("Não foi possível obter o id do vídeo após inserção.");
             }
 
-            // ── Inserir imagem ──
-            $conexao->prepare("INSERT INTO video_imagem (id_video, caminho_imagem, imagem_principal) VALUES (?, ?, true)")
-                    ->execute([$id_video, $caminho_imagem]);
+            // Inserir categorias
+            $stmt_cat = $conexao->prepare(
+                "INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)"
+            );
+            foreach ($categorias_selecionadas as $id_categoria) {
+                $stmt_cat->execute([$id_video, (int)$id_categoria]);
+            }
+
+            // Inserir imagem de destaque
+            $conexao->prepare(
+                "INSERT INTO video_imagem (id_video, caminho_imagem, imagem_principal)
+                 VALUES (?, ?, true)"
+            )->execute([$id_video, $caminho_imagem]);
 
             $conexao->commit();
             $mensagem      = "✅ Vídeo cadastrado com sucesso!";
@@ -105,12 +97,11 @@ $id_video = $row['id_video'];
             $redirecionar  = true;
 
         } catch (Exception $e) {
-    $conexao->rollBack();
-    // Log detalhado temporário
-    error_log("ERRO CADASTRO VIDEO: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
-    $mensagem = "❌ Erro: " . $e->getMessage();
-    $tipo_mensagem = "error";
-}
+            $conexao->rollBack();
+            error_log("ERRO CADASTRO VIDEO: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+            $mensagem      = "❌ Erro ao gravar na base de dados: " . $e->getMessage();
+            $tipo_mensagem = "error";
+        }
     }
 }
 ?>
@@ -142,6 +133,7 @@ $id_video = $row['id_video'];
         .preview-container img { max-width: 300px; border-radius: 8px; }
         .preview-container video { max-width: 500px; border-radius: 8px; }
 
+        /* ── Barras de progresso ── */
         .upload-progress-wrapper { display: none; margin-top: 14px; text-align: left; }
         .upload-progress-wrapper.visible { display: block; }
         .progress-header {
@@ -166,6 +158,7 @@ $id_video = $row['id_video'];
         .progress-bar.done::after { display: none; }
         .progress-meta { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #999; }
 
+        /* ── Overlay global de envio ── */
         #uploadOverlay {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.55); z-index: 9999;
@@ -177,7 +170,8 @@ $id_video = $row['id_video'];
             min-width: 340px; max-width: 480px; width: 90%;
             box-shadow: 0 12px 40px rgba(0,0,0,0.25);
         }
-        .overlay-card h3 { margin: 0 0 20px; font-size: 1.1rem; color: #333; }
+        .overlay-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: #333; }
+        .overlay-step { font-size: 0.82rem; color: #888; margin-bottom: 20px; }
         .overlay-section { margin-bottom: 18px; }
         .overlay-section:last-child { margin-bottom: 0; }
         .overlay-label {
@@ -269,7 +263,7 @@ $id_video = $row['id_video'];
                     </div>
                 </div>
 
-                <!-- Upload Prévia -->
+                <!-- ── Upload Prévia ── -->
                 <div class="form-group">
                     <label>Prévia do Vídeo * (MP4, WebM ou OGG — Máx: 100MB)</label>
                     <input type="file" name="video_previa" id="video_previa" accept="video/*" class="file-input" required>
@@ -296,7 +290,7 @@ $id_video = $row['id_video'];
                     </div>
                 </div>
 
-                <!-- Upload Imagem -->
+                <!-- ── Upload Imagem ── -->
                 <div class="form-group">
                     <label>Imagem de Destaque * (JPG, PNG ou WebP — Máx: 5MB)</label>
                     <input type="file" name="imagem_destaque" id="imagem_destaque" accept="image/*" class="file-input" required>
@@ -328,10 +322,12 @@ $id_video = $row['id_video'];
         </div>
     </div>
 
-    <!-- Overlay de envio global -->
+    <!-- ── Overlay global de envio ── -->
     <div id="uploadOverlay">
         <div class="overlay-card">
             <h3>⬆️ Enviando arquivos… Por favor aguarde.</h3>
+            <p class="overlay-step" id="overlayStep">A preparar…</p>
+
             <div class="overlay-section">
                 <div class="overlay-label">
                     🎬 Prévia do vídeo
@@ -345,6 +341,7 @@ $id_video = $row['id_video'];
                     <span id="overlaySpeedPrevia"></span>
                 </div>
             </div>
+
             <div class="overlay-section">
                 <div class="overlay-label">
                     🖼️ Imagem de destaque
@@ -366,6 +363,9 @@ $id_video = $row['id_video'];
     <?php endif; ?>
 
     <script>
+    // ════════════════════════════════════════════════════════
+    //  DROP ZONES — pré-visualização local dos ficheiros
+    // ════════════════════════════════════════════════════════
     setupDropZone('dropZonePrevia', 'video_previa',    'fileNamePrevia', 'previewPrevia', 'video');
     setupDropZone('dropZoneImagem', 'imagem_destaque', 'fileNameImagem', 'previewImagem', 'image');
 
@@ -396,6 +396,7 @@ $id_video = $row['id_video'];
         previewEl.innerHTML = '';
         const suffix = type === 'video' ? 'Previa' : 'Imagem';
         showLocalReadProgress(file, suffix);
+
         if (type === 'video') {
             const video = document.createElement('video');
             video.src = URL.createObjectURL(file);
@@ -410,6 +411,7 @@ $id_video = $row['id_video'];
         }
     }
 
+    // Progresso de leitura local (FileReader) — indica que o ficheiro foi lido
     function showLocalReadProgress(file, suffix) {
         const wrapper = document.getElementById('progressWrapper' + suffix);
         const bar     = document.getElementById('progressBar'     + suffix);
@@ -451,100 +453,176 @@ $id_video = $row['id_video'];
         reader.readAsArrayBuffer(file);
     }
 
-    document.getElementById('uploadForm').addEventListener('submit', function (e) {
+    // ════════════════════════════════════════════════════════
+    //  SUBMISSÃO EM 3 FASES:
+    //   1. Upload do vídeo  → upload_cloudinary.php
+    //   2. Upload da imagem → upload_cloudinary.php
+    //   3. Gravar metadados → cadastrar_video.php (este ficheiro)
+    // ════════════════════════════════════════════════════════
+    document.getElementById('uploadForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const form      = this;
-        const overlay   = document.getElementById('uploadOverlay');
-        const submitBtn = document.getElementById('submitBtn');
+        const form       = this;
+        const overlay    = document.getElementById('uploadOverlay');
+        const submitBtn  = document.getElementById('submitBtn');
+        const stepEl     = document.getElementById('overlayStep');
         const filePrevia = document.getElementById('video_previa').files[0];
         const fileImagem = document.getElementById('imagem_destaque').files[0];
         const nomeVideo  = document.getElementById('nome_video').value.trim();
 
-        if (!nomeVideo)  { alert('Por favor, preencha o nome do vídeo.'); return; }
-        if (!filePrevia) { alert('Por favor, selecione a prévia do vídeo.'); return; }
-        if (!fileImagem) { alert('Por favor, selecione a imagem de destaque.'); return; }
+        // Validações rápidas antes de começar
+        if (!nomeVideo)  { mostrarErroInline('⚠️ Por favor, preencha o nome do vídeo.'); return; }
+        if (!filePrevia) { mostrarErroInline('⚠️ Por favor, selecione a prévia do vídeo.'); return; }
+        if (!fileImagem) { mostrarErroInline('⚠️ Por favor, selecione a imagem de destaque.'); return; }
 
         overlay.classList.add('visible');
         submitBtn.disabled = true;
         resetOverlayBar('Previa');
         resetOverlayBar('Imagem');
 
-        const formData   = new FormData(form);
-        const xhr        = new XMLHttpRequest();
-        const started    = Date.now();
-        const sizePrevia = filePrevia.size;
-        const sizeImagem = fileImagem.size;
+        try {
+            // ── Fase 1: Upload do vídeo ──
+            stepEl.textContent = 'Passo 1/3 — A enviar a prévia do vídeo…';
+            const urlPrevia = await uploadComProgresso(filePrevia, 'video', 'Previa');
 
-        xhr.upload.onprogress = function (e) {
-            if (!e.lengthComputable) return;
-            const elapsed      = (Date.now() - started) / 1000 || 0.001;
-            const speed        = e.loaded / elapsed;
-            const loadedPrevia = Math.min(e.loaded, sizePrevia);
-            const loadedImagem = Math.max(0, e.loaded - sizePrevia);
-            updateBar('Previa', Math.round((loadedPrevia / sizePrevia) * 100), loadedPrevia, sizePrevia, speed);
-            updateBar('Imagem', sizeImagem > 0 ? Math.round((loadedImagem / sizeImagem) * 100) : 0, loadedImagem, sizeImagem, speed);
-        };
+            // ── Fase 2: Upload da imagem ──
+            stepEl.textContent = 'Passo 2/3 — A enviar a imagem de destaque…';
+            const urlImagem = await uploadComProgresso(fileImagem, 'imagem', 'Imagem');
 
-xhr.onload = function () {
-    overlay.classList.remove('visible');
-    submitBtn.disabled = false;
+            // ── Fase 3: Gravar na BD ──
+            stepEl.textContent = 'Passo 3/3 — A guardar na base de dados…';
+            const formData = new FormData(form);
+            // Remove os ficheiros binários — já não são necessários
+            formData.delete('video_previa');
+            formData.delete('imagem_destaque');
+            // Envia as URLs obtidas da Cloudinary
+            formData.append('url_previa', urlPrevia);
+            formData.append('url_imagem', urlImagem);
 
-    if (xhr.status === 200) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xhr.responseText, 'text/html');
-        const novaMensagem = doc.querySelector('.mensagem');
-        
-        if (novaMensagem && novaMensagem.classList.contains('success')) {
-            // Redirecionar após sucesso
-            const mainEl = document.querySelector('.main');
-            mainEl.innerHTML = '<h1>Cadastrar Novo Vídeo</h1>';
-            mainEl.prepend(novaMensagem);
-            setTimeout(() => { window.location.href = 'gerenciar_videos.php'; }, 2000);
-        } else if (novaMensagem) {
-            // Mostrar erro sem redirecionar
-            const existente = document.querySelector('.mensagem');
-            if (existente) existente.remove();
-            document.querySelector('.main').insertBefore(novaMensagem, document.querySelector('.main').firstChild.nextSibling);
-        }
-    } else {
-        alert("Erro no servidor: " + xhr.status);
-    }
-};
+            const resp = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+            });
 
-        xhr.onerror = function () {
+            if (!resp.ok) {
+                throw new Error(`Erro HTTP ${resp.status} ao gravar na base de dados.`);
+            }
+
+            const html = await resp.text();
+            const doc  = new DOMParser().parseFromString(html, 'text/html');
+            const msg  = doc.querySelector('.mensagem');
+
             overlay.classList.remove('visible');
             submitBtn.disabled = false;
-            alert('Erro de rede durante o envio. Tente novamente.');
-        };
 
-        xhr.open('POST', form.action || window.location.href, true);
-        xhr.send(formData);
+            if (msg && msg.classList.contains('success')) {
+                // Sucesso — mostra mensagem e redireciona
+                const existente = document.querySelector('.mensagem');
+                if (existente) existente.remove();
+                document.querySelector('.main h1').insertAdjacentElement('afterend', msg);
+                setTimeout(() => { window.location.href = 'gerenciar_videos.php'; }, 2000);
+            } else if (msg) {
+                // Erro devolvido pelo servidor
+                mostrarErroInline(msg.textContent);
+            } else {
+                mostrarErroInline('❌ Resposta inesperada do servidor. Verifique os logs.');
+            }
+
+        } catch (err) {
+            overlay.classList.remove('visible');
+            submitBtn.disabled = false;
+            mostrarErroInline('❌ ' + err.message);
+        }
     });
 
+    // Faz o upload de um ficheiro para upload_cloudinary.php com barra de progresso
+    function uploadComProgresso(file, tipo, suffix) {
+        return new Promise((resolve, reject) => {
+            const fd = new FormData();
+            fd.append('arquivo', file);
+            fd.append('tipo', tipo);
+
+            const xhr     = new XMLHttpRequest();
+            const started = Date.now();
+
+            xhr.upload.onprogress = function (e) {
+                if (!e.lengthComputable) return;
+                const elapsed = (Date.now() - started) / 1000 || 0.001;
+                const speed   = e.loaded / elapsed;
+                const pct     = Math.round((e.loaded / e.total) * 100);
+                updateBar(suffix, pct, e.loaded, e.total, speed);
+            };
+
+            xhr.onload = function () {
+                if (xhr.status !== 200) {
+                    reject(new Error(`Erro HTTP ${xhr.status} no upload do ficheiro.`));
+                    return;
+                }
+                let data;
+                try {
+                    data = JSON.parse(xhr.responseText);
+                } catch (ex) {
+                    reject(new Error('Resposta inválida do servidor de upload.'));
+                    return;
+                }
+                if (data.erro) {
+                    reject(new Error(data.erro));
+                    return;
+                }
+                // Marca a barra como concluída
+                updateBar(suffix, 100, file.size, file.size, 0);
+                resolve(data.url);
+            };
+
+            xhr.onerror = () => reject(new Error('Erro de rede durante o upload. Verifique a sua ligação.'));
+            xhr.ontimeout = () => reject(new Error('Timeout: o upload demorou demasiado.'));
+
+            xhr.open('POST', 'upload_cloudinary.php', true);
+            xhr.send(fd);
+        });
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  UTILITÁRIOS
+    // ════════════════════════════════════════════════════════
     function updateBar(suffix, pct, loaded, total, speed) {
         const bar     = document.getElementById('overlayBar'   + suffix);
         const pctEl   = document.getElementById('overlayPct'   + suffix);
         const sizeEl  = document.getElementById('overlaySize'  + suffix);
         const speedEl = document.getElementById('overlaySpeed' + suffix);
-        bar.style.width     = pct + '%';
-        pctEl.textContent   = pct + '%';
+
+        bar.style.width   = pct + '%';
+        pctEl.textContent = pct + '%';
         sizeEl.textContent  = `${formatBytes(loaded)} / ${formatBytes(total)}`;
         speedEl.textContent = speed > 0 ? `${formatBytes(speed)}/s` : '';
-        if (pct >= 100) { bar.classList.add('done'); speedEl.textContent = '✅ Concluído'; }
+
+        if (pct >= 100) {
+            bar.classList.add('done');
+            speedEl.textContent = '✅ Concluído';
+        }
     }
 
     function resetOverlayBar(suffix) {
-        document.getElementById('overlayBar'   + suffix).style.width = '0%';
-        document.getElementById('overlayBar'   + suffix).classList.remove('done');
+        const bar = document.getElementById('overlayBar' + suffix);
+        bar.style.width = '0%';
+        bar.classList.remove('done');
         document.getElementById('overlayPct'   + suffix).textContent = '0%';
         document.getElementById('overlaySize'  + suffix).textContent = '';
         document.getElementById('overlaySpeed' + suffix).textContent = '';
     }
 
+    function mostrarErroInline(texto) {
+        const existente = document.querySelector('.mensagem');
+        if (existente) existente.remove();
+        const div = document.createElement('div');
+        div.className   = 'mensagem error';
+        div.textContent = texto;
+        document.querySelector('.main h1').insertAdjacentElement('afterend', div);
+    }
+
     function formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024, sizes = ['B','KB','MB','GB'];
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
