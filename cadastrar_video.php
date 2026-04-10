@@ -80,14 +80,14 @@ $resultImage = $cloudinary->uploadApi()->upload(
 $caminho_imagem = $resultImage['secure_url'];           // ── Inserir vídeo ──
 
 
-     $stmt_video = $conexao->prepare("
+$stmt_video = $conexao->prepare("
     INSERT INTO video (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
     VALUES (?, ?, ?, ?, ?, ?)
     RETURNING id_video
 ");
 $stmt_video->execute([$nome_video, $descricao, $preco, $duracao, $caminho_previa, $usuario['id_usuario']]);
-
-$id_video = $stmt_video->fetchColumn();
+$row = $stmt_video->fetch(PDO::FETCH_ASSOC); // fetch() em vez de fetchColumn()
+$id_video = $row['id_video'];
 
             // ── Inserir categorias ──
             $stmt_cat = $conexao->prepare("INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)");
@@ -105,12 +105,12 @@ $id_video = $stmt_video->fetchColumn();
             $redirecionar  = true;
 
         } catch (Exception $e) {
-            $conexao->rollBack();
-            $mensagem      = "❌ Erro: " . $e->getMessage();
-            $tipo_mensagem = "error";
-            if (isset($caminho_previa) && file_exists($caminho_previa)) unlink($caminho_previa);
-            if (isset($caminho_imagem) && file_exists($caminho_imagem)) unlink($caminho_imagem);
-        }
+    $conexao->rollBack();
+    // Log detalhado temporário
+    error_log("ERRO CADASTRO VIDEO: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+    $mensagem = "❌ Erro: " . $e->getMessage();
+    $tipo_mensagem = "error";
+}
     }
 }
 ?>
@@ -486,22 +486,30 @@ $id_video = $stmt_video->fetchColumn();
             updateBar('Imagem', sizeImagem > 0 ? Math.round((loadedImagem / sizeImagem) * 100) : 0, loadedImagem, sizeImagem, speed);
         };
 
-   xhr.onload = function () {
+xhr.onload = function () {
+    overlay.classList.remove('visible');
+    submitBtn.disabled = false;
+
     if (xhr.status === 200) {
-  
-        overlay.classList.remove('visible');
-        
-       
         const parser = new DOMParser();
         const doc = parser.parseFromString(xhr.responseText, 'text/html');
         const novaMensagem = doc.querySelector('.mensagem');
-        if (novaMensagem) {
-            document.querySelector('.main').prepend(novaMensagem);
+        
+        if (novaMensagem && novaMensagem.classList.contains('success')) {
+            // Redirecionar após sucesso
+            const mainEl = document.querySelector('.main');
+            mainEl.innerHTML = '<h1>Cadastrar Novo Vídeo</h1>';
+            mainEl.prepend(novaMensagem);
+            setTimeout(() => { window.location.href = 'gerenciar_videos.php'; }, 2000);
+        } else if (novaMensagem) {
+            // Mostrar erro sem redirecionar
+            const existente = document.querySelector('.mensagem');
+            if (existente) existente.remove();
+            document.querySelector('.main').insertBefore(novaMensagem, document.querySelector('.main').firstChild.nextSibling);
         }
     } else {
-      alert("Erro no servidor: " + xhr.status);
+        alert("Erro no servidor: " + xhr.status);
     }
-    submitBtn.disabled = false;
 };
 
         xhr.onerror = function () {
