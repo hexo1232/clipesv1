@@ -23,6 +23,13 @@ $lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM ca
 
 // ── Processar POST ──
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    
+    if (empty($_POST) && empty($_FILES) && $_SERVER['CONTENT_LENGTH'] > 0) {
+        $mensagem = "❌ O arquivo é grande demais para o servidor processar.";
+        $tipo_mensagem = "error";
+    }
+    
+
     $nome_video              = trim($_POST['nome_video'] ?? '');
     $descricao               = trim($_POST['descricao'] ?? '');
     $preco                   = floatval($_POST['preco'] ?? 0);
@@ -34,9 +41,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($nome_video) || empty($categorias_selecionadas)) {
         $mensagem      = "⚠️ Nome do vídeo e pelo menos uma categoria são obrigatórios.";
         $tipo_mensagem = "error";
-    } elseif (!isset($arquivo_previa) || $arquivo_previa['error'] != UPLOAD_ERR_OK) {
-        $mensagem      = "⚠️ A prévia do vídeo é obrigatória.";
-        $tipo_mensagem = "error";
+  } elseif (!isset($arquivo_previa) || $arquivo_previa['error'] != UPLOAD_ERR_OK) {
+    // MODIFICAÇÃO PARA DEBUG:
+    $erro_codigo = $arquivo_previa['error'] ?? 'Não definido';
+    $mensagem      = "⚠️ Erro no upload da prévia. Código do erro PHP: " . $erro_codigo;
+    $tipo_mensagem = "error";
     } elseif (!isset($arquivo_imagem) || $arquivo_imagem['error'] != UPLOAD_ERR_OK) {
         $mensagem      = "⚠️ A imagem de destaque é obrigatória.";
         $tipo_mensagem = "error";
