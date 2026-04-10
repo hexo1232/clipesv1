@@ -5,6 +5,7 @@ include "conexao.php"; // Deve ser a versão PDO que configuramos
 include "info_usuario.php";
 
 $conexao->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$cloudinary = require __DIR__ . '/config/cloudinary.php';
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -44,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $tipo_mensagem = "error";
   } elseif (!isset($arquivo_previa) || $arquivo_previa['error'] != UPLOAD_ERR_OK) {
     // MODIFICAÇÃO PARA DEBUG:
-    $erro_codigo = $arquivo_previa['error'] ?? 'Não definido';
+$erro_codigo = $arquivo_previa['error'] ?? null;
     $mensagem      = "⚠️ Erro no upload da prévia. Código do erro PHP: " . $erro_codigo;
     $tipo_mensagem = "error";
     } elseif (!isset($arquivo_imagem) || $arquivo_imagem['error'] != UPLOAD_ERR_OK) {
@@ -54,34 +55,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $conexao->beginTransaction();
         try {
             // ── Upload da prévia ──
-            $dir_previa = "uploads/videos/previas/";
-            if (!is_dir($dir_previa)) mkdir($dir_previa, 0777, true);
-            $ext_previa     = pathinfo($arquivo_previa['name'], PATHINFO_EXTENSION);
-            $caminho_previa = $dir_previa . uniqid("previa_") . "." . strtolower($ext_previa);
+      
+// ── Upload da prévia (VÍDEO) ──
+$resultVideo = $cloudinary->uploadApi()->upload(
+    $arquivo_previa['tmp_name'],
+    [
+        "resource_type" => "video",
+        "folder" => "videos/previas"
+    ]
+);
 
-            $tipos_video_permitidos = ['video/mp4', 'video/webm', 'video/ogg'];
-            if (!in_array($arquivo_previa['type'], $tipos_video_permitidos))
-                throw new Exception("Formato de vídeo não permitido. Use MP4, WebM ou OGG.");
-            if ($arquivo_previa['size'] > 100 * 1024 * 1024)
-                throw new Exception("A prévia é muito grande. Limite: 100MB.");
-            if (!move_uploaded_file($arquivo_previa['tmp_name'], $caminho_previa))
-                throw new Exception("Erro ao fazer upload da prévia.");
+$caminho_previa = $resultVideo['secure_url'];
 
-            // ── Upload da imagem ──
-            $dir_imagem = "uploads/videos/imagens/";
-            if (!is_dir($dir_imagem)) mkdir($dir_imagem, 0777, true);
-            $ext_imagem     = pathinfo($arquivo_imagem['name'], PATHINFO_EXTENSION);
-            $caminho_imagem = $dir_imagem . uniqid("img_") . "." . strtolower($ext_imagem);
 
-            $tipos_imagem_permitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-            if (!in_array($arquivo_imagem['type'], $tipos_imagem_permitidos))
-                throw new Exception("Formato de imagem não permitido. Use JPG, PNG ou WebP.");
-            if ($arquivo_imagem['size'] > 5 * 1024 * 1024)
-                throw new Exception("A imagem é muito grande. Limite: 5MB.");
-            if (!move_uploaded_file($arquivo_imagem['tmp_name'], $caminho_imagem))
-                throw new Exception("Erro ao fazer upload da imagem.");
+// ── Upload da imagem ──
+$resultImage = $cloudinary->uploadApi()->upload(
+    $arquivo_imagem['tmp_name'],
+    [
+        "resource_type" => "image",
+        "folder" => "videos/imagens"
+    ]
+);
 
-            // ── Inserir vídeo ──
+$caminho_imagem = $resultImage['secure_url'];           // ── Inserir vídeo ──
+
+
      $stmt_video = $conexao->prepare("
     INSERT INTO video (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -501,7 +499,7 @@ $id_video = $stmt_video->fetchColumn();
             document.querySelector('.main').prepend(novaMensagem);
         }
     } else {
-        alert("Erro no servidor: " . xhr.status);
+      alert("Erro no servidor: " + xhr.status);
     }
     submitBtn.disabled = false;
 };

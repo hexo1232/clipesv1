@@ -310,9 +310,9 @@ $total_encontrados = count($videos);
         <?php foreach ($videos as $v): ?>
             <div class="video-card">
                 <div class="video-thumbnail-wrapper">
-                    <?php if (!empty($v['caminho_imagem']) && file_exists($v['caminho_imagem'])): ?>
-                        <img src="<?= $v['caminho_imagem'] ?>" alt="Thumbnail" class="video-thumbnail">
-                    <?php else: ?>
+                 <?php if (!empty($v['caminho_imagem'])): ?>
+    <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>" class="video-thumbnail">
+<?php else: ?>
                         <div class="video-thumbnail" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                     <?php endif; ?>
 

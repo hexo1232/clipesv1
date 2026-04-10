@@ -373,19 +373,26 @@ $totalVis       = $conexao->query("SELECT COALESCE(SUM(visualizacoes), 0) FROM v
                 <div class="video-card">
 
                     <!-- Imagem + overlays -->
-                    <div class="card-image-wrapper">
-                        <input type="checkbox" name="videos_ids[]"
-                               value="<?= $v['id_video'] ?>" class="card-select">
+                <div class="card-image-wrapper">
 
-                        <?php if (!empty($v['caminho_imagem']) && file_exists($v['caminho_imagem'])): ?>
-                            <img src="<?= $v['caminho_imagem'] ?>"
-                                 alt="<?= htmlspecialchars($v['nome_video']) ?>">
-                        <?php else: ?>
-                            <div style="width:100%;height:100%;background:#bdc3c7;
-                                        display:flex;align-items:center;justify-content:center;color:white;">
-                                Sem Imagem
-                            </div>
-                        <?php endif; ?>
+    <input type="checkbox" name="videos_ids[]" value="<?= $v['id_video'] ?>">
+
+    <!-- IMAGEM DO CLOUDINARY -->
+    <?php if (!empty($v['caminho_imagem'])): ?>
+        <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>" />
+    <?php else: ?>
+        <div class="placeholder">Sem imagem</div>
+    <?php endif; ?>
+
+    <!-- PRÉVIA DO VÍDEO (opcional) -->
+    <?php if (!empty($v['caminho_previa'])): ?>
+        <video muted autoplay loop>
+            <source src="<?= htmlspecialchars($v['caminho_previa']) ?>" type="video/mp4">
+        </video>
+    <?php endif; ?>
+
+</div>
+                 
 
                         <span class="card-status-tag <?= $v['ativo'] ? 'tag-ativo' : 'tag-inativo' ?>">
                             <?= $v['ativo'] ? 'ATIVO' : 'INATIVO' ?>
