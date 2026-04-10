@@ -1,0 +1,280 @@
+ 
+.main, .container {
+  margin-left: 220px;
+  padding: 25px;
+  animation: fadeIn 0.7s ease-in;
+}
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+   width: 240px;
+    height: 100vh;
+  background: linear-gradient(180deg,#89b67f, #75a768);
+  color: #ecf0f1;
+  display: flex;
+  flex-direction: column;
+  padding: 25px 0;
+  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+}
+
+.sidebar h2 {
+  text-align: center;
+  margin-bottom: 35px;
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+
+.sidebar a {
+    color:inherit;
+  padding: 12px 20px;
+  display: block;
+  transition: background 0.3s, transform 0.2s, padding-left 0.2s;
+  border-left: 3px solid transparent;
+  font-weight: 500;
+}
+
+.sidebar a:hover {
+  background: #7db670;
+  transform: translateX(2px);
+  border-left: 3px solid #ffffff;
+
+}
+.sidebar-footer {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 1rem 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    background: #57854d;
+}
+
+.sidebar-footer img {
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    filter: brightness(0.9);
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.sidebar-footer img:hover {
+    transform: scale(1.15);
+    filter: brightness(1.2);
+}
+
+/* ======== SMOOTH SCROLL PARA CONTEÚDO ======== */
+@media (max-width: 1199px) {
+    .conteudo {
+        scroll-behavior: smooth;
+        overflow-x: hidden;
+    }
+}
+
+
+
+/* ======== FIX PARA SAFARI MOBILE ======== */
+@supports (-webkit-touch-callout: none) {
+    .sidebar {
+        height: -webkit-fill-available;
+    }
+}
+/* ======== SIDEBAR MOBILE FULL WIDTH ======== */
+@media (max-width: 1199px) {
+    .sidebar {
+        width: 70vw !important; /* quase tela inteira */
+        max-width: 70vw !important;
+        transform: translateX(-100%);
+        transition: transform 0.32s ease;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        z-index: 2000;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    /* impede o conteúdo de deslizar junto */
+    .main.sidebar-open,
+    .conteudo.sidebar-open {
+        transform: none !important;
+    }
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 90;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s ease;
+}
+
+.sidebar-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+@media (max-width: 1199px) {
+    .menu-btn {
+        display: flex !important;
+    }
+}
+.main.sidebar-open,
+.conteudo.sidebar-open {
+    transform: translateX(240px);
+    transition: 0.3s ease;
+}
+
+/* ===== RESET DE ALTURA E MARGENS PARA MOBILE ===== */
+@media (max-width: 1199px) {
+
+    html, body {
+        height: 100%;
+        min-height: 100%;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow-x: hidden;
+    }
+
+    .main,
+    .conteudo,
+    .container {
+        margin: 0 !important;
+        padding-bottom: 0 !important;
+        min-height: calc(100vh - 0px) !important;
+        height: auto !important;
+    }
+
+    /* Garante que nada empurre o conteúdo */
+    * {
+        max-height: 100%;
+    }
+}
+
+body.dark-mode .sidebar {
+  background: linear-gradient(180deg, #111, #000);
+  color: #fff;
+  box-shadow: 3px 0 12px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .sidebar h2 {
+  color: #fff;
+}
+
+body.dark-mode .sidebar a {
+  color: #ddd;
+}
+
+body.dark-mode .sidebar a:hover {
+  background: #222;
+  border-left: 3px solid #fff;
+  color: #fff;
+}
+
+body.dark-mode .sidebar-footer {
+  background: #111;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .sidebar-footer img {
+  filter: brightness(0.8);
+}
+
+body.dark-mode .sidebar-footer img:hover {
+  filter: brightness(1.3);
+}
+
+#limpeza {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+#limpeza:hover {
+    background-color: #217dbb;
+    transform: scale(1.05);
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #0a66a3ff;
+}
+
+#pesquisa {
+    background-color: #f1c40f;
+    height: 36px;
+    color: #2c3e50;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+#pesquisa:hover {
+    background-color: #d4ac0d;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+
+.menu-btn {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 2100;
+    background-color: #89b67f;
+    color: var(--text-color, #000);
+    border: none;
+    /* border-radius: 8px; */
+    padding: 10px 15px;
+    font-size: 24px;
+    cursor: pointer;
+    /* box-shadow: 0 2px 10px rgba(0,0,0,0.2); */
+    transition: all 0.3s ease;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 50px;
+}
+
+.menu-btn:focus{
+    border:#5f8a55;
+}
+.menu-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.menu-btn:active {
+    transform: scale(0.95);
+}
+
+.dark-mode .menu-btn {
+    background-color: #1e1e1e;
+    color: #89b67f;
+}
