@@ -1,7 +1,8 @@
 <?php
 // index.php
-include "conexao.php";
 include "verifica_login_opcional.php";
+include "conexao.php";
+
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");

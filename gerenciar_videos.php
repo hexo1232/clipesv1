@@ -1,8 +1,8 @@
 <?php
-// gerenciar_videos.php
-include "conexao.php";
 include "verifica_login.php";
+include "conexao.php"; // Deve ser a versão PDO que configuramos
 include "info_usuario.php";
+
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");

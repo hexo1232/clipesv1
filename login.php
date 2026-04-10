@@ -15,43 +15,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (!empty($entrada) && !empty($senha)) {
         // CORREÇÃO: Trocado 'email' por 'apelido' para bater com seu banco de dados
-        $stmt = $conexao->prepare("SELECT * FROM usuario WHERE nome ILIKE ? OR apelido ILIKE ? LIMIT 1");
-        $stmt->execute([$entrada, $entrada]);
+      $stmt = $conexao->prepare("SELECT * FROM usuario WHERE TRIM(nome) ILIKE ? OR TRIM(apelido) ILIKE ? LIMIT 1");
+$stmt->execute([$entrada, $entrada]);
         $usuario = $stmt->fetch();
 
         if ($usuario) {
-            if (password_verify($senha, $usuario['senha_hash'])) {
-                $_SESSION['usuario'] = $usuario;
+    if (password_verify($senha, $usuario['senha_hash'])) {
+        $_SESSION['usuario'] = $usuario;
 
-                // CORREÇÃO: PostgreSQL trata booleanos como 't'/'f' ou true/false. 
-                // Ajustado para capturar tanto 1 quanto true.
-                $forcarTroca = $usuario['primeira_senha'];
-                if ($forcarTroca === true || $forcarTroca === 't' || $forcarTroca === 1 || $forcarTroca === '1') {
-                    $_SESSION['id_usuario'] = $usuario['id_usuario'];
-                    header("Location: alterar_senha.php?primeiro=1");
-                    exit;
-                }
-
-                if (isset($_SESSION['url_destino'])) {
-                    $urlDestino = $_SESSION['url_destino'];
-                    unset($_SESSION['url_destino']);
-                    header("Location: " . $urlDestino);
-                } else {
-                    // Seu banco usa 'idperfil', então mantemos assim
-                    if ((int)$usuario['idperfil'] === 1) {
-                        header("Location: dashboard.php");
-                    } else {
-                        header("Location: index.php");
-                    }
-                }
-                exit;
-
-            } else {
-                $erro = "Senha incorreta.";
-            }
-        } else {
-            $erro = "Usuário não encontrado.";
+        // 1. Prioridade: Troca de senha obrigatória
+        $forcarTroca = $usuario['primeira_senha'];
+        if ($forcarTroca === true || $forcarTroca === 't' || $forcarTroca === 1 || $forcarTroca === '1') {
+            $_SESSION['id_usuario'] = $usuario['id_usuario'];
+            header("Location: alterar_senha.php?primeiro=1");
+            exit;
         }
+
+        // 2. Segunda Prioridade: URL de destino salva na sessão (pelo verifica_login)
+        if (isset($_SESSION['url_destino'])) {
+            $urlDestino = $_SESSION['url_destino'];
+            unset($_SESSION['url_destino']); // Limpa para não repetir o redirecionamento
+            header("Location: " . $urlDestino);
+            exit;
+        }
+
+        // 3. Terceira Prioridade: Redirecionamento padrão por perfil
+        if ((int)$usuario['idperfil'] === 1) {
+            header("Location: dashboard.php");
+        } else {
+            header("Location: index.php");
+        }
+        exit;
+
+    } else {
+        $erro = "Senha incorreta.";
+    }
+} else {
+    $erro = "Usuário não encontrado.";
+}
     }
 }
 ?>

@@ -1,7 +1,9 @@
 <?php
 // toggle_video_status.php
-include "conexao.php";
 include "verifica_login.php";
+include "conexao.php"; // Deve ser a versão PDO que configuramos
+
+
 
 if (!isset($_SESSION['usuario'])) {
     header("Location: login.php");

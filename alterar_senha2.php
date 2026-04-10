@@ -1,17 +1,17 @@
 <?php
-include "conexao.php";
-require_once "verifica_login.php";
+//allterar_senha2.php
+include "verifica_login.php";
+include "conexao.php"; // Deve ser a versão PDO que configuramos
 include "info_usuario.php";
 
+
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 if (!isset($_SESSION['usuario'])) {
     header("Location: login.php");
     exit;
 }
-
 
 $usuario_logado = $_SESSION['usuario'];
 $id_usuario = $usuario_logado['id_usuario'];
@@ -25,36 +25,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nova_senha = $_POST['nova_senha'] ?? '';
     $confirmacao = $_POST['confirmacao'] ?? '';
 
-    // 1. Buscar hash atual
-    $stmt = $conexao->prepare("SELECT senha_hash FROM usuario WHERE id_usuario = ?");
-    $stmt->bind_param("i", $id_usuario);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
-    $usuario = $resultado->fetch_assoc();
-    $stmt->close();
+    try {
+        // 1. Buscar hash atual
+        $stmt = $conexao->prepare("SELECT senha_hash FROM usuario WHERE id_usuario = ?");
+        $stmt->execute([$id_usuario]);
+        $usuario_db = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$usuario || !password_verify($senha_atual, $usuario['senha_hash'])) {
-        $mensagem = "A Senha actual está incorrecta.";
-    } elseif ($nova_senha !== $confirmacao) {
-        $mensagem = "A nova senha e a confirmação não coincidem.";
-    } else {
-        // 2. Atualizar senha
-        $nova_hash = password_hash($nova_senha, PASSWORD_DEFAULT);
+        if (!$usuario_db || !password_verify($senha_atual, $usuario_db['senha_hash'])) {
+            $mensagem = "A Senha actual está incorrecta.";
+        } elseif ($nova_senha !== $confirmacao) {
+            $mensagem = "A nova senha e a confirmação não coincidem.";
+        } else {
+            // Iniciar transação para garantir que ambos os updates ocorram
+            $conexao->beginTransaction();
 
-        $stmt = $conexao->prepare("UPDATE usuario SET senha_hash = ?, primeira_senha = 0 WHERE id_usuario = ?");
-        $stmt->bind_param("si", $nova_hash, $id_usuario);
-        $stmt->execute();
-        $stmt->close();
+            // 2. Atualizar senha
+            $nova_hash = password_hash($nova_senha, PASSWORD_DEFAULT);
+            $stmt = $conexao->prepare("UPDATE usuario SET senha_hash = ?, primeira_senha = '0' WHERE id_usuario = ?");
+            $stmt->execute([$nova_hash, $id_usuario]);
 
-        // 3. Registrar no histórico
-        $stmt_hist = $conexao->prepare("INSERT INTO historico_senhas (id_usuario, senha_hash) VALUES (?, ?)");
-        $stmt_hist->bind_param("is", $id_usuario, $nova_hash);
-        $stmt_hist->execute();
-        $stmt_hist->close();
+            // 3. Registrar no histórico
+            $stmt_hist = $conexao->prepare("INSERT INTO historico_senhas (id_usuario, senha_hash) VALUES (?, ?)");
+            $stmt_hist->execute([$id_usuario, $nova_hash]);
 
-        $mensagem = "Senha atualizada com sucesso! Você será desconectado para aplicar as mudanças.";
-        $tipo_mensagem = "success";
-        $redirecionar = true;
+            $conexao->commit();
+
+            $mensagem = "Senha atualizada com sucesso! Você será desconectado para aplicar as mudanças.";
+            $tipo_mensagem = "success";
+            $redirecionar = true;
+        }
+    } catch (PDOException $e) {
+        if ($conexao->inTransaction()) $conexao->rollBack();
+        $mensagem = "Erro no banco de dados: " . $e->getMessage();
     }
 }
 ?>
