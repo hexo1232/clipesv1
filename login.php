@@ -1,6 +1,5 @@
 <?php
 // login.php
-// session_start() DEVE ser a primeira coisa absolutamente — antes de qualquer include
 session_start();
 
 include "conexao.php";
@@ -15,50 +14,52 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_SESSION['url_destino'] = basename($_GET['redir']);
     }
 
-    // ── PDO: prepare + execute com array posicional ──
-    $stmt = $conexao->prepare("SELECT * FROM usuario WHERE nome = ? LIMIT 1");
-    $stmt->execute([$entrada]);
-    $usuario = $stmt->fetch(); // PDO::FETCH_ASSOC já configurado na conexão
+    if (!empty($entrada) && !empty($senha)) {
+        // Busca flexível compatível com PostgreSQL
+        $stmt = $conexao->prepare("SELECT * FROM usuario WHERE nome ILIKE ? OR email ILIKE ? LIMIT 1");
+        $stmt->execute([$entrada, $entrada]);
+        $usuario = $stmt->fetch();
 
-    if ($usuario) {
-        if (password_verify($senha, $usuario['senha_hash'])) {
-            $_SESSION['usuario'] = $usuario;
+        if ($usuario) {
+            // Verifica a senha usando o hash da imagem (bcrypt)
+            if (password_verify($senha, $usuario['senha_hash'])) {
+                $_SESSION['usuario'] = $usuario;
 
-            // Senha padrão — forçar alteração
-            if ((int)$usuario['primeira_senha'] === 1) {
-                $_SESSION['id_usuario'] = $usuario['id_usuario'];
-                header("Location: alterar_senha.php?primeiro=1");
+                // Forçar alteração se for a primeira senha
+                // NOTA: Certifique-se de que a coluna 'primeira_senha' existe no banco
+                if (isset($usuario['primeira_senha']) && (int)$usuario['primeira_senha'] === 1) {
+                    $_SESSION['id_usuario'] = $usuario['id_usuario'];
+                    header("Location: alterar_senha.php?primeiro=1");
+                    exit;
+                }
+
+                // Redirecionamento
+                if (isset($_SESSION['url_destino'])) {
+                    $urlDestino = $_SESSION['url_destino'];
+                    unset($_SESSION['url_destino']);
+                    header("Location: " . $urlDestino);
+                } else {
+                    // Ajuste o nome da coluna idperfil se necessário
+                    $perfil = $usuario['idperfil'] ?? $usuario['id_perfil'] ?? 0;
+                    if ((int)$perfil === 1) {
+                        header("Location: dashboard.php");
+                    } else {
+                        header("Location: index.php");
+                    }
+                }
                 exit;
-            }
 
-            // Redirecionar para URL guardada, se existir
-            if (isset($_SESSION['url_destino'])) {
-                $urlDestino = $_SESSION['url_destino'];
-                unset($_SESSION['url_destino']);
-                header("Location: " . $urlDestino);
-                exit;
-            }
-
-            // Redirecionar por perfil
-            if ((int)$usuario['idperfil'] === 1) {
-                header("Location: dashboard.php");
             } else {
-                header("Location: index.php");
+                $erro = "Senha incorreta.";
             }
-            exit;
-
         } else {
-            $erro = "Senha incorreta.";
-            if (!empty($usuario['email'])) {
-                $link_reset = "public/reset_password.php?email=" . urlencode($usuario['email']);
-                $erro .= " <a href='$link_reset'>Esqueceu a senha?</a>";
-            }
+            // Se cair aqui, o usuário realmente não foi encontrado com o termo digitado
+            $erro = "Usuário não encontrado.";
         }
-    } else {
-        $erro = "Usuário não encontrado.";
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt">
 <head>
