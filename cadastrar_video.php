@@ -473,14 +473,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             updateBar('Imagem', sizeImagem > 0 ? Math.round((loadedImagem / sizeImagem) * 100) : 0, loadedImagem, sizeImagem, speed);
         };
 
-        xhr.onload = function () {
-            updateBar('Previa', 100, sizePrevia, sizePrevia, 0);
-            updateBar('Imagem', 100, sizeImagem, sizeImagem, 0);
-            setTimeout(() => {
-                overlay.classList.remove('visible');
-                window.location.href = window.location.href;
-            }, 800);
-        };
+   xhr.onload = function () {
+    if (xhr.status === 200) {
+  
+        overlay.classList.remove('visible');
+        
+       
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xhr.responseText, 'text/html');
+        const novaMensagem = doc.querySelector('.mensagem');
+        if (novaMensagem) {
+            document.querySelector('.main').prepend(novaMensagem);
+        }
+    } else {
+        alert("Erro no servidor: " . xhr.status);
+    }
+    submitBtn.disabled = false;
+};
 
         xhr.onerror = function () {
             overlay.classList.remove('visible');
