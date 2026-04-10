@@ -20,36 +20,28 @@ $stmt->execute([$entrada, $entrada]);
         $usuario = $stmt->fetch();
 
         if ($usuario) {
-    if (password_verify($senha, $usuario['senha_hash'])) {
-        $_SESSION['usuario'] = $usuario;
-
-        // 1. Prioridade: Troca de senha obrigatória
-        $forcarTroca = $usuario['primeira_senha'];
-        if ($forcarTroca === true || $forcarTroca === 't' || $forcarTroca === 1 || $forcarTroca === '1') {
-            $_SESSION['id_usuario'] = $usuario['id_usuario'];
-            header("Location: alterar_senha.php?primeiro=1");
-            exit;
-        }
-
-        // 2. Segunda Prioridade: URL de destino salva na sessão (pelo verifica_login)
-        if (isset($_SESSION['url_destino'])) {
-            $urlDestino = $_SESSION['url_destino'];
-            unset($_SESSION['url_destino']); // Limpa para não repetir o redirecionamento
-            header("Location: " . $urlDestino);
-            exit;
-        }
-
-        // 3. Terceira Prioridade: Redirecionamento padrão por perfil
+if (password_verify($senha, $usuario['senha_hash'])) {
+    $_SESSION['usuario'] = $usuario;
     $idPerfil = (int)$usuario['idperfil'];
 
-if ($idPerfil === 1) {
-    header("Location: dashboard.php");
-} else {
-    header("Location: index.php");
-}
-exit;
+    // Se for Admin, ignora qualquer url_destino antiga e vai pro Dashboard
+    if ($idPerfil === 1) {
+        unset($_SESSION['url_destino']); 
+        header("Location: dashboard.php");
+        exit;
+    }
 
-    } else {
+    // Se não for admin, segue o fluxo normal
+    if (isset($_SESSION['url_destino'])) {
+        $urlDestino = $_SESSION['url_destino'];
+        unset($_SESSION['url_destino']);
+        header("Location: " . $urlDestino);
+        exit;
+    }
+
+    header("Location: index.php");
+    exit;
+} else {
         $erro = "Senha incorreta.";
     }
 } else {
