@@ -1,6 +1,6 @@
 <?php
-
-include "conexao.php";
+// dashboard.php (ou o nome do seu arquivo de estatísticas)
+include "conexao.php"; // Deve ser a versão PDO que configuramos
 include "verifica_login.php"; 
 include "info_usuario.php";
 
@@ -14,37 +14,33 @@ if (!isset($_SESSION['usuario'])) {
 }
 
 // ========================================
-// ESTATÍSTICAS GERAIS
+// ESTATÍSTICAS GERAIS (Padrão PDO/Postgres)
 // ========================================
 
-// Total de vídeos
-$queryTotalVideos = "SELECT COUNT(*) as total FROM video WHERE ativo = 1";
-$totalVideos = $conexao->query($queryTotalVideos)->fetch_assoc()['total'];
+// Total de vídeos ativos
+$totalVideos = $conexao->query("SELECT COUNT(*) FROM video WHERE ativo = true")->fetchColumn();
 
 // Total de visualizações
-$queryTotalVisualizacoes = "SELECT SUM(visualizacoes) as total FROM video";
-$totalVisualizacoes = $conexao->query($queryTotalVisualizacoes)->fetch_assoc()['total'] ?? 0;
+$totalVisualizacoes = $conexao->query("SELECT COALESCE(SUM(visualizacoes), 0) FROM video")->fetchColumn();
 
 // Total de downloads de prévias
-$queryTotalDownloads = "SELECT COUNT(*) as total FROM video_download_previa";
-$totalDownloads = $conexao->query($queryTotalDownloads)->fetch_assoc()['total'];
+$totalDownloads = $conexao->query("SELECT COUNT(*) FROM video_download_previa")->fetchColumn();
 
 // Total de categorias
-$queryTotalCategorias = "SELECT COUNT(*) as total FROM categoria";
-$totalCategorias = $conexao->query($queryTotalCategorias)->fetch_assoc()['total'];
+$totalCategorias = $conexao->query("SELECT COUNT(*) FROM categoria")->fetchColumn();
 
 // ========================================
 // TOP 10 VÍDEOS MAIS VISTOS
 // ========================================
-$queryTopVideos = "SELECT nome_video, visualizacoes 
-                   FROM video 
-                   WHERE ativo = 1 
-                   ORDER BY visualizacoes DESC 
-                   LIMIT 10";
-$resultTopVideos = $conexao->query($queryTopVideos);
 $topVideos = [];
 $topVideosViews = [];
-while ($row = $resultTopVideos->fetch_assoc()) {
+$queryTopVideos = "SELECT nome_video, visualizacoes 
+                   FROM video 
+                   WHERE ativo = true 
+                   ORDER BY visualizacoes DESC 
+                   LIMIT 10";
+
+foreach ($conexao->query($queryTopVideos)->fetchAll() as $row) {
     $topVideos[] = mb_substr($row['nome_video'], 0, 30) . (mb_strlen($row['nome_video']) > 30 ? '...' : '');
     $topVideosViews[] = (int)$row['visualizacoes'];
 }
@@ -52,17 +48,17 @@ while ($row = $resultTopVideos->fetch_assoc()) {
 // ========================================
 // VISUALIZAÇÕES POR CATEGORIA
 // ========================================
+$categorias = [];
+$categoriasViews = [];
 $queryCategoriasViews = "SELECT c.nome_categoria, SUM(v.visualizacoes) as total_views
                          FROM categoria c
                          INNER JOIN video_categoria vc ON c.id_categoria = vc.id_categoria
                          INNER JOIN video v ON vc.id_video = v.id_video
-                         WHERE v.ativo = 1
-                         GROUP BY c.id_categoria
+                         WHERE v.ativo = true
+                         GROUP BY c.id_categoria, c.nome_categoria
                          ORDER BY total_views DESC";
-$resultCategorias = $conexao->query($queryCategoriasViews);
-$categorias = [];
-$categoriasViews = [];
-while ($row = $resultCategorias->fetch_assoc()) {
+
+foreach ($conexao->query($queryCategoriasViews)->fetchAll() as $row) {
     $categorias[] = $row['nome_categoria'];
     $categoriasViews[] = (int)$row['total_views'];
 }
@@ -70,17 +66,17 @@ while ($row = $resultCategorias->fetch_assoc()) {
 // ========================================
 // TOP 10 VÍDEOS MAIS BAIXADOS (PRÉVIAS)
 // ========================================
+$topDownloadVideos = [];
+$topDownloadCounts = [];
 $queryTopDownloads = "SELECT v.nome_video, COUNT(vdp.id_download) as total_downloads
                       FROM video v
                       INNER JOIN video_download_previa vdp ON v.id_video = vdp.id_video
-                      WHERE v.ativo = 1
-                      GROUP BY v.id_video
+                      WHERE v.ativo = true
+                      GROUP BY v.id_video, v.nome_video
                       ORDER BY total_downloads DESC
                       LIMIT 10";
-$resultTopDownloads = $conexao->query($queryTopDownloads);
-$topDownloadVideos = [];
-$topDownloadCounts = [];
-while ($row = $resultTopDownloads->fetch_assoc()) {
+
+foreach ($conexao->query($queryTopDownloads)->fetchAll() as $row) {
     $topDownloadVideos[] = mb_substr($row['nome_video'], 0, 30) . (mb_strlen($row['nome_video']) > 30 ? '...' : '');
     $topDownloadCounts[] = (int)$row['total_downloads'];
 }
@@ -88,19 +84,18 @@ while ($row = $resultTopDownloads->fetch_assoc()) {
 // ========================================
 // DISTRIBUIÇÃO DE VÍDEOS POR CATEGORIA
 // ========================================
+$categoriasDistribuicao = [];
+$videosDistribuicao = [];
 $queryDistribuicao = "SELECT c.nome_categoria, COUNT(vc.id_video) as total_videos
                       FROM categoria c
                       LEFT JOIN video_categoria vc ON c.id_categoria = vc.id_categoria
-                      GROUP BY c.id_categoria
+                      GROUP BY c.id_categoria, c.nome_categoria
                       ORDER BY total_videos DESC";
-$resultDistribuicao = $conexao->query($queryDistribuicao);
-$categoriasDistribuicao = [];
-$videosDistribuicao = [];
-while ($row = $resultDistribuicao->fetch_assoc()) {
+
+foreach ($conexao->query($queryDistribuicao)->fetchAll() as $row) {
     $categoriasDistribuicao[] = $row['nome_categoria'];
     $videosDistribuicao[] = (int)$row['total_videos'];
 }
-
 ?>
 
 <!DOCTYPE html>
