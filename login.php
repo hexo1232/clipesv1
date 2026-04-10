@@ -1,7 +1,6 @@
 <?php
 // login.php
 session_start();
-
 include "conexao.php";
 
 $erro = '';
@@ -15,33 +14,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if (!empty($entrada) && !empty($senha)) {
-        // Busca flexível compatível com PostgreSQL
-        $stmt = $conexao->prepare("SELECT * FROM usuario WHERE nome ILIKE ? OR email ILIKE ? LIMIT 1");
+        // CORREÇÃO: Trocado 'email' por 'apelido' para bater com seu banco de dados
+        $stmt = $conexao->prepare("SELECT * FROM usuario WHERE nome ILIKE ? OR apelido ILIKE ? LIMIT 1");
         $stmt->execute([$entrada, $entrada]);
         $usuario = $stmt->fetch();
 
         if ($usuario) {
-            // Verifica a senha usando o hash da imagem (bcrypt)
             if (password_verify($senha, $usuario['senha_hash'])) {
                 $_SESSION['usuario'] = $usuario;
 
-                // Forçar alteração se for a primeira senha
-                // NOTA: Certifique-se de que a coluna 'primeira_senha' existe no banco
-                if (isset($usuario['primeira_senha']) && (int)$usuario['primeira_senha'] === 1) {
+                // CORREÇÃO: PostgreSQL trata booleanos como 't'/'f' ou true/false. 
+                // Ajustado para capturar tanto 1 quanto true.
+                $forcarTroca = $usuario['primeira_senha'];
+                if ($forcarTroca === true || $forcarTroca === 't' || $forcarTroca === 1 || $forcarTroca === '1') {
                     $_SESSION['id_usuario'] = $usuario['id_usuario'];
                     header("Location: alterar_senha.php?primeiro=1");
                     exit;
                 }
 
-                // Redirecionamento
                 if (isset($_SESSION['url_destino'])) {
                     $urlDestino = $_SESSION['url_destino'];
                     unset($_SESSION['url_destino']);
                     header("Location: " . $urlDestino);
                 } else {
-                    // Ajuste o nome da coluna idperfil se necessário
-                    $perfil = $usuario['idperfil'] ?? $usuario['id_perfil'] ?? 0;
-                    if ((int)$perfil === 1) {
+                    // Seu banco usa 'idperfil', então mantemos assim
+                    if ((int)$usuario['idperfil'] === 1) {
                         header("Location: dashboard.php");
                     } else {
                         header("Location: index.php");
@@ -53,7 +50,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $erro = "Senha incorreta.";
             }
         } else {
-            // Se cair aqui, o usuário realmente não foi encontrado com o termo digitado
             $erro = "Usuário não encontrado.";
         }
     }
