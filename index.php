@@ -10,7 +10,8 @@ $usuarioLogado = $_SESSION['usuario'] ?? null;
 $id_perfil     = $usuarioLogado['idperfil'] ?? null;
 $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
-$WHATSAPP_NUMBER = "258871054204";
+// ── INSIRA O SEU LINK DO TELEGRAM AQUI ──
+$TELEGRAM_LINK = "https://t.me/SEU_USERNAME_AQUI";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
@@ -51,7 +52,7 @@ $lista_categorias = $conexao->query("SELECT id_categoria, nome_categoria FROM ca
 $filtros  = [];
 $sql_base = "FROM video v
              LEFT JOIN video_imagem vi ON v.id_video = vi.id_video AND vi.imagem_principal = true
-             WHERE v.ativo = true"; 
+             WHERE v.ativo = true";
 
 if (!empty($_GET['categoria'])) {
     $sql_base .= " AND EXISTS (SELECT 1 FROM video_categoria vc WHERE vc.id_video = v.id_video AND vc.id_categoria = ?)";
@@ -94,7 +95,7 @@ $total_paginas   = ceil($total_registros / $limite);
 // ── Buscar vídeos ──
 $stmt = $conexao->prepare("SELECT v.*, vi.caminho_imagem " . $sql_base . " ORDER BY v.data_cadastro DESC LIMIT ? OFFSET ?");
 $stmt->execute(array_merge($filtros, [$limite, $offset]));
-$videos           = $stmt->fetchAll();
+$videos            = $stmt->fetchAll();
 $total_encontrados = count($videos);
 ?>
 <!DOCTYPE html>
@@ -102,39 +103,558 @@ $total_encontrados = count($videos);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Repository</title>
+<title>VideoHub — Premium Video Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
 <style>
-.btn-whatsapp {
-    background: linear-gradient(135deg, #25D366, #128C7E);
-    color: white;
-}
-.btn-whatsapp:hover {
-    background: linear-gradient(135deg, #128C7E, #075E54);
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:         #0a0a0f;
+    --surface:    #12121a;
+    --surface2:   #1a1a26;
+    --border:     rgba(255,255,255,0.07);
+    --gold:       #d4a843;
+    --gold-light: #f0c96a;
+    --teal:       #2AABEE;
+    --teal-dark:  #1a8fc4;
+    --text:       #e8e8f0;
+    --muted:      #7a7a96;
+    --radius:     14px;
+    --radius-sm:  8px;
+    --shadow:     0 20px 60px rgba(0,0,0,0.5);
 }
 
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 24px;
+}
+.topbar .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+}
+.logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.logo span { color: var(--text); }
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 50px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+}
+.nav-links a:hover {
+    color: var(--text);
+    background: var(--surface2);
+}
+
+/* ── HERO BANNER ── */
+.hero {
+    background: linear-gradient(135deg, #0a0a0f 0%, #12121a 40%, #0d1520 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 24px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,168,67,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(212,168,67,0.1);
+    border: 1px solid rgba(212,168,67,0.25);
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 50px;
+    margin-bottom: 20px;
+}
+.hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 14px;
+}
+.hero h1 em {
+    font-style: normal;
+    color: var(--gold);
+}
+.hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 480px;
+    margin: 0 auto 28px;
+}
+.hero-trust {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.trust-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+.trust-pill i { color: var(--gold); font-size: 0.9rem; }
+
+/* ── MAIN CONTAINER ── */
+.main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+}
+
+/* ── FILTER TOGGLE BTN ── */
+.filter-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+}
+.filter-toggle-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+}
+.filter-toggle-btn .fa-chevron-down {
+    transition: transform 0.3s;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+.filter-toggle-btn.active .fa-chevron-down { transform: rotate(180deg); }
+
+/* ── FILTERS PANEL ── */
+.filters {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 28px;
+    display: none;
+}
+.filters.show { display: block; }
+.filters h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.filter-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 7px;
+}
+.filter-group input,
+.filter-group select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 9px 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.filter-group input:focus,
+.filter-group select:focus {
+    border-color: var(--gold);
+}
+.filter-group input::placeholder { color: var(--muted); }
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.btn-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+.btn-primary {
+    background: var(--gold);
+    color: #0a0a0f;
+}
+.btn-primary:hover { background: var(--gold-light); }
+.btn-secondary {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── COUNT BAR ── */
+.count-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+.count i { color: var(--gold); }
+.count strong { color: var(--text); }
+
+/* ── VIDEO GRID ── */
+.videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 22px;
+}
+
+/* ── VIDEO CARD ── */
+.video-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
+}
+.video-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(212,168,67,0.3);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(212,168,67,0.1);
+}
+
+/* ── THUMBNAIL ── */
+.video-thumbnail-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--surface2);
+}
+.video-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease;
+}
+.video-card:hover .video-thumbnail { transform: scale(1.04); }
+
+.price-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--gold);
+    color: #0a0a0f;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 4px 11px;
+    border-radius: 50px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(212,168,67,0.4);
+}
+.duration-badge {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ── CARD BODY ── */
+.video-info {
+    padding: 18px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.video-title {
+    font-size: 0.97rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.video-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+.video-stats span { display: flex; align-items: center; gap: 5px; }
+.online-badge {
+    color: #4ade80 !important;
+    font-weight: 600;
+}
+.online-badge i { font-size: 0.5rem; }
+
+/* ── ACTION BUTTONS ── */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+}
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+}
+/* Row layout for preview + telegram */
+.action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.btn-preview {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+.btn-preview:hover {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--muted);
+}
+
+.btn-telegram {
+    background: linear-gradient(135deg, #2AABEE, #1a8fc4);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(42,171,238,0.25);
+}
+.btn-telegram:hover {
+    background: linear-gradient(135deg, #1a8fc4, #0f6d9e);
+    box-shadow: 0 6px 20px rgba(42,171,238,0.35);
+}
+
+.btn-buy {
+    background: linear-gradient(135deg, var(--gold), #b8861e);
+    color: #0a0a0f;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 12px 14px;
+    box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.btn-buy:hover {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    box-shadow: 0 6px 24px rgba(212,168,67,0.45);
+    transform: translateY(-1px);
+}
+.btn-buy i { font-size: 1rem; }
+
+/* ── PAGINATION ── */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 48px;
+    flex-wrap: wrap;
+}
+.pagination a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.pagination a:hover { border-color: var(--gold); color: var(--gold); }
+.pagination a.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #0a0a0f;
+}
+
+/* ── MODAL ── */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+}
+.modal[style*="display: block"] { display: flex !important; }
+.modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 860px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.close-modal {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 1.6rem;
+    color: var(--muted);
+    cursor: pointer;
+    z-index: 10;
+    transition: color 0.2s;
+    line-height: 1;
+}
+.close-modal:hover { color: var(--text); }
+.video-player {
+    width: 100%;
+    display: block;
+    max-height: 80vh;
+    background: #000;
+}
+
+/* ── TOAST ── */
 #infoToast {
     position: fixed;
     bottom: 24px;
     right: 24px;
     z-index: 9999;
-    max-width: 320px;
-    background: #1e1e2e;
-    color: #f0f0f0;
-    border-radius: 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-    padding: 18px 20px 16px;
+    max-width: 300px;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    border-left: 4px solid #25D366;
+    border-left: 3px solid var(--gold);
     animation: slideInToast 0.4s ease;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
     line-height: 1.5;
 }
 @keyframes slideInToast {
-    from { opacity: 0; transform: translateY(30px); }
+    from { opacity: 0; transform: translateY(24px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 #infoToast .toast-header {
@@ -145,8 +665,8 @@ $total_encontrados = count($videos);
 }
 #infoToast .toast-title {
     font-weight: 700;
-    font-size: 0.95rem;
-    color: #25D366;
+    font-size: 0.9rem;
+    color: var(--gold);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -154,43 +674,65 @@ $total_encontrados = count($videos);
 #infoToast .toast-close {
     background: none;
     border: none;
-    color: #aaa;
+    color: var(--muted);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.95rem;
     padding: 0;
     line-height: 1;
     transition: color 0.2s;
 }
-#infoToast .toast-close:hover { color: #fff; }
+#infoToast .toast-close:hover { color: var(--text); }
 #infoToast .toast-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.04);
     border-radius: 8px;
     padding: 8px 10px;
 }
 #infoToast .toast-row i {
-    font-size: 1.2rem;
-    min-width: 20px;
+    font-size: 1.1rem;
+    min-width: 18px;
     text-align: center;
+    margin-top: 2px;
+    color: var(--gold);
 }
-#infoToast .toast-row.whatsapp i { color: #25D366; }
-#infoToast .toast-row.telegram  i { color: #2AABEE; }
-#infoToast .toast-row.account   i { color: #f1c40f; }
-
 #infoToast .toast-row span strong {
     display: block;
-    font-size: 0.82rem;
-    color: #ccc;
+    font-size: 0.78rem;
+    color: var(--muted);
     font-weight: 600;
     margin-bottom: 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 #infoToast.hidden { display: none; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+    grid-column: 1 / -1;
+}
+.empty-state i { font-size: 3rem; margin-bottom: 16px; color: var(--border); }
+.empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+    .hero { padding: 40px 20px 32px; }
+    .hero h1 { font-size: 2.4rem; }
+    .main-container { padding: 24px 16px 48px; }
+    .videos-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .hero-trust { gap: 14px; }
+    .nav-links a { padding: 6px 10px; font-size: 0.82rem; }
+    #infoToast { max-width: calc(100vw - 32px); right: 16px; bottom: 16px; }
+}
 </style>
 </head>
 <body>
 
+<!-- ── TOAST ── -->
 <div id="infoToast">
     <div class="toast-header">
         <span class="toast-title">
@@ -200,50 +742,48 @@ $total_encontrados = count($videos);
             <i class="fas fa-xmark"></i>
         </button>
     </div>
-    
-    <div class="toast-row account">
+    <div class="toast-row">
         <i class="fas fa-user-clock"></i>
         <span>
             <strong>Access</strong>
             Login is optional. You can browse and buy without an account.
         </span>
     </div>
-
-    <div class="toast-row whatsapp">
-        <i class="fab fa-whatsapp"></i>
-        <span>
-            <strong>Negotiation</strong>
-            All purchases are negotiated via WhatsApp.
-        </span>
-    </div>
-    <div class="toast-row telegram">
-        <i class="fab fa-telegram"></i>
-        <span>
-            <strong>Delivery</strong>
-            Videos are delivered through Telegram after payment.
-        </span>
-    </div>
 </div>
 
+<!-- ── TOPBAR ── -->
 <div class="topbar">
     <div class="container">
-        <div class="logo">🎬 VideoHub</div>
+        <div class="logo">🎬 <span>Video</span>Hub</div>
         <div class="nav-links">
-            <a href="index.php">Home</a>
+            <a href="index.php"><i class="fas fa-house"></i> Home</a>
             <a href="#">Videos</a>
             <?php if ($usuarioLogado): ?>
-                <a href="logout.php">Sign Out</a>
+                <a href="logout.php"><i class="fas fa-arrow-right-from-bracket"></i> Sign Out</a>
             <?php else: ?>
-                <a href="login.php">Login</a>
+                <a href="login.php"><i class="fas fa-user"></i> Login</a>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
+<!-- ── HERO ── -->
+<div class="hero">
+    <div class="hero-eyebrow"><i class="fas fa-bolt"></i> Instant Access</div>
+    <h1>Premium <em>Videos</em><br>Delivered Fast</h1>
+    <p>Browse our exclusive collection. Pay securely via Telegram and get your video immediately.</p>
+    <div class="hero-trust">
+        <span class="trust-pill"><i class="fas fa-shield-halved"></i> Secure Purchase</span>
+        <span class="trust-pill"><i class="fab fa-telegram"></i> Fast Delivery</span>
+        <span class="trust-pill"><i class="fas fa-user-slash"></i> No Account Needed</span>
+    </div>
+</div>
+
+<!-- ── MAIN ── -->
 <div class="main-container">
 
     <button class="filter-toggle-btn" id="filterToggle">
-        <i class="fas fa-filter"></i>
+        <i class="fas fa-sliders"></i>
         <span>Show Filters</span>
         <i class="fas fa-chevron-down"></i>
     </button>
@@ -252,17 +792,15 @@ $total_encontrados = count($videos);
         <h2><i class="fas fa-filter"></i> Search Filters</h2>
         <form method="get">
             <div class="filter-grid">
-
                 <div class="filter-group">
                     <label>Search Video</label>
                     <input type="text" name="busca" placeholder="Video name..."
                            value="<?= htmlspecialchars($_GET['busca'] ?? '') ?>">
                 </div>
-
                 <div class="filter-group">
                     <label>Category</label>
                     <select name="categoria">
-                        <option value="">All</option>
+                        <option value="">All Categories</option>
                         <?php foreach ($lista_categorias as $cat): ?>
                             <option value="<?= $cat['id_categoria'] ?>"
                                 <?= isset($_GET['categoria']) && $_GET['categoria'] == $cat['id_categoria'] ? 'selected' : '' ?>>
@@ -271,31 +809,26 @@ $total_encontrados = count($videos);
                         <?php endforeach; ?>
                     </select>
                 </div>
-
                 <div class="filter-group">
-                    <label>Minimum Duration (min)</label>
+                    <label>Min Duration (min)</label>
                     <input type="number" name="duracao_min" placeholder="e.g. 5" min="0"
                            value="<?= htmlspecialchars($_GET['duracao_min'] ?? '') ?>">
                 </div>
-
                 <div class="filter-group">
-                    <label>Maximum Duration (min)</label>
+                    <label>Max Duration (min)</label>
                     <input type="number" name="duracao_max" placeholder="e.g. 60" min="0"
                            value="<?= htmlspecialchars($_GET['duracao_max'] ?? '') ?>">
                 </div>
-
                 <div class="filter-group">
-                    <label>Minimum Price ($)</label>
+                    <label>Min Price ($)</label>
                     <input type="number" name="preco_min" placeholder="e.g. 10" min="0" step="0.01"
                            value="<?= htmlspecialchars($_GET['preco_min'] ?? '') ?>">
                 </div>
-
                 <div class="filter-group">
-                    <label>Maximum Price ($)</label>
+                    <label>Max Price ($)</label>
                     <input type="number" name="preco_max" placeholder="e.g. 100" min="0" step="0.01"
                            value="<?= htmlspecialchars($_GET['preco_max'] ?? '') ?>">
                 </div>
-
             </div>
             <div class="filter-buttons">
                 <button type="submit" class="btn-filter btn-primary">
@@ -308,24 +841,49 @@ $total_encontrados = count($videos);
         </form>
     </div>
 
-    <div class="count">
-        <i class="fas fa-video"></i> <?= $total_encontrados ?> video(s) found
+    <div class="count-bar">
+        <div class="count">
+            <i class="fas fa-video"></i>
+            <strong><?= $total_encontrados ?></strong> video<?= $total_encontrados !== 1 ? 's' : '' ?> found
+        </div>
     </div>
 
     <div class="videos-grid">
-        <?php foreach ($videos as $v): ?>
+        <?php if (empty($videos)): ?>
+            <div class="empty-state">
+                <i class="fas fa-film"></i>
+                <h3>No videos found</h3>
+                <p>Try adjusting your filters or clear the search.</p>
+            </div>
+        <?php endif; ?>
+
+        <?php foreach ($videos as $v):
+            $mensagem_telegram = urlencode(
+                "Hello! I'm interested in purchasing:\n\n" .
+                "🎬 Video: " . $v['nome_video'] . "\n" .
+                "💰 Price: $" . number_format($v['preco'], 2) . "\n" .
+                "⏱ Duration: " . ($v['duracao'] ?? 'N/A') . "\n\n" .
+                "How do I proceed with payment?"
+            );
+            $link_telegram = $TELEGRAM_LINK . "?text=" . $mensagem_telegram;
+        ?>
             <div class="video-card">
                 <div class="video-thumbnail-wrapper">
                     <?php if (!empty($v['caminho_imagem'])): ?>
-                        <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>" class="video-thumbnail">
+                        <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>"
+                             class="video-thumbnail"
+                             alt="<?= htmlspecialchars($v['nome_video']) ?>"
+                             loading="lazy">
                     <?php else: ?>
-                        <div class="video-thumbnail" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                        <div class="video-thumbnail" style="background: linear-gradient(135deg, #1a1a26 0%, #12121a 100%); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-film" style="font-size:3rem; color:rgba(212,168,67,0.2);"></i>
+                        </div>
                     <?php endif; ?>
 
                     <div class="price-badge">$<?= number_format($v['preco'], 2) ?></div>
                     <?php if (!empty($v['duracao'])): ?>
                         <div class="duration-badge">
-                            <i class="far fa-clock"></i> <?= $v['duracao'] ?>
+                            <i class="far fa-clock"></i> <?= htmlspecialchars($v['duracao']) ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -334,31 +892,24 @@ $total_encontrados = count($videos);
                     <h3 class="video-title"><?= htmlspecialchars($v['nome_video']) ?></h3>
 
                     <div class="video-stats">
-                        <span><i class="fas fa-eye"></i> <?= number_format($v['visualizacoes']) ?></span>
-                        <span class="online-badge"><i class="fas fa-circle"></i> Online</span>
+                        <span><i class="fas fa-eye"></i> <?= number_format($v['visualizacoes']) ?> views</span>
+                        <span class="online-badge"><i class="fas fa-circle"></i> Available</span>
                     </div>
 
                     <div class="action-buttons">
-                        <button onclick="abrirPreview(<?= $v['id_video'] ?>, '<?= addslashes($v['caminho_previa']) ?>')"
-                                class="action-btn btn-preview">
-                            <i class="far fa-play-circle"></i> Preview
-                        </button>
-
-                        <?php
-                            $mensagem_whatsapp = urlencode(
-                                "Hello! I'm interested in purchasing the following video:\n\n" .
-                                "🎬 *Video:* " . $v['nome_video'] . "\n" .
-                                "💰 *Price:* $" . number_format($v['preco'], 2) . "\n" .
-                                "⏱ *Duration:* " . ($v['duracao'] ?? 'N/A') . "\n\n" .
-                                "Please let me know how to proceed with the payment."
-                            );
-                            $link_whatsapp = "https://wa.me/" . $WHATSAPP_NUMBER . "?text=" . $mensagem_whatsapp;
-                        ?>
-                        <a href="<?= $link_whatsapp ?>" target="_blank" class="action-btn btn-whatsapp">
-                            <i class="fab fa-whatsapp"></i> WhatsApp
-                        </a>
-                        <a href="<?= $link_whatsapp ?>" target="_blank" class="action-btn btn-pay">
-                            <i class="fas fa-credit-card"></i> Buy Now
+                        <div class="action-row">
+                            <button onclick="abrirPreview(<?= $v['id_video'] ?>, '<?= addslashes($v['caminho_previa']) ?>')"
+                                    class="action-btn btn-preview">
+                                <i class="far fa-play-circle"></i> Preview
+                            </button>
+                            <a href="<?= $link_telegram ?>" target="_blank" rel="noopener"
+                               class="action-btn btn-telegram">
+                                <i class="fab fa-telegram"></i> Chat
+                            </a>
+                        </div>
+                        <a href="<?= $link_telegram ?>" target="_blank" rel="noopener"
+                           class="action-btn btn-buy">
+                            <i class="fas fa-bolt"></i> Buy Now — $<?= number_format($v['preco'], 2) ?>
                         </a>
                     </div>
                 </div>
@@ -369,9 +920,9 @@ $total_encontrados = count($videos);
     <?php if ($total_paginas > 1): ?>
         <div class="pagination">
             <?php for ($i = 1; $i <= $total_paginas; $i++):
-                $params          = $_GET;
+                $params           = $_GET;
                 $params['pagina'] = $i;
-                $url             = '?' . http_build_query($params);
+                $url              = '?' . http_build_query($params);
             ?>
                 <a href="<?= $url ?>" class="<?= $i == $pagina_atual ? 'active' : '' ?>">
                     <?= $i ?>
@@ -382,40 +933,39 @@ $total_encontrados = count($videos);
 
 </div>
 
+<!-- ── MODAL PREVIEW ── -->
 <div id="modalPreview" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="fecharPreview()">&times;</span>
-        <video id="videoPreview" class="video-player" controls>
+        <video id="videoPreview" class="video-player" controls playsinline>
             <source id="videoSource" src="" type="video/mp4">
         </video>
     </div>
 </div>
 
 <script>
+// ── Toast ──
 function dismissToast() {
     const toast = document.getElementById('infoToast');
-    toast.style.animation  = 'none';
-    toast.style.opacity    = '0';
-    toast.style.transform  = 'translateY(30px)';
     toast.style.transition = 'opacity 0.3s, transform 0.3s';
+    toast.style.opacity    = '0';
+    toast.style.transform  = 'translateY(24px)';
     setTimeout(() => toast.classList.add('hidden'), 300);
     sessionStorage.setItem('toastDismissed', '1');
 }
-
 window.addEventListener('DOMContentLoaded', () => {
-    if (!sessionStorage.getItem('toastDismissed')) {
-        const toast = document.getElementById('infoToast');
-        toast.style.display = 'none';
-        setTimeout(() => { toast.style.display = 'flex'; }, 1500);
+    const toast = document.getElementById('infoToast');
+    if (sessionStorage.getItem('toastDismissed')) {
+        toast.classList.add('hidden');
     } else {
-        document.getElementById('infoToast').classList.add('hidden');
+        toast.style.display = 'none';
+        setTimeout(() => { toast.style.display = 'flex'; }, 1800);
     }
 });
 
-// Toggle Filters
+// ── Filter toggle ──
 const filterToggle     = document.getElementById('filterToggle');
 const filtersContainer = document.getElementById('filtersContainer');
-
 filterToggle.addEventListener('click', function () {
     filtersContainer.classList.toggle('show');
     filterToggle.classList.toggle('active');
@@ -423,22 +973,19 @@ filterToggle.addEventListener('click', function () {
     span.textContent = filtersContainer.classList.contains('show') ? 'Hide Filters' : 'Show Filters';
 });
 
-// Preview
+// ── Preview modal ──
 function abrirPreview(idVideo, caminho) {
     document.getElementById('modalPreview').style.display = 'block';
     document.getElementById('videoSource').src = caminho;
     document.getElementById('videoPreview').load();
     document.body.style.overflow = 'hidden';
 
-    const formData = new FormData();
-    formData.append('registrar_visualizacao', '1');
-    formData.append('id_video', idVideo);
-
-    fetch(window.location.href, { method: 'POST', body: formData })
-        .then(res => res.json())
-        .catch(err => console.error('Error registering view:', err));
+    const fd = new FormData();
+    fd.append('registrar_visualizacao', '1');
+    fd.append('id_video', idVideo);
+    fetch(window.location.href, { method: 'POST', body: fd })
+        .catch(err => console.error('View register error:', err));
 }
-
 function fecharPreview() {
     document.getElementById('modalPreview').style.display = 'none';
     const player = document.getElementById('videoPreview');
@@ -446,13 +993,11 @@ function fecharPreview() {
     player.currentTime = 0;
     document.body.style.overflow = 'auto';
 }
-
-window.onclick = function (event) {
-    if (event.target == document.getElementById('modalPreview')) fecharPreview();
+window.onclick = function (e) {
+    if (e.target === document.getElementById('modalPreview')) fecharPreview();
 };
-
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') fecharPreview();
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') fecharPreview();
 });
 </script>
 
