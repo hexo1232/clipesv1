@@ -1,8 +1,5 @@
 <?php
-// upload_cloudinary.php
-// Recebe um ficheiro (vídeo ou imagem), faz upload para a Cloudinary e devolve JSON.
-
-include "verifica_login.php";   // já chama session_start() internamente
+include "verifica_login.php";  
 include "conexao.php";
 
 $cloudinary = require __DIR__ . '/config/cloudinary.php';
