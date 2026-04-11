@@ -76,7 +76,7 @@ $totalVis       = $conexao->query("SELECT COALESCE(SUM(visualizacoes), 0) FROM v
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gerenciar Vídeos</title>
 <link rel="stylesheet" href="css/admin.css">
-<script src="logout_auto.js"></script>
+
 <script src="js/darkmode2.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/dropdown2.js"></script>

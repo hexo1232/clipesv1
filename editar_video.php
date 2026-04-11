@@ -182,7 +182,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Editar Vídeo</title>
 <link rel="stylesheet" href="css/admin.css">
-<script src="logout_auto.js"></script>
+
 <script src="js/darkmode2.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/dropdown2.js"></script>
