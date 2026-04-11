@@ -1,5 +1,11 @@
 <?php
-// cadastrar_video.php
+// ════════════════════════════════════════════════════════════════════════════
+//  cadastrar_video.php
+//  — GET  : renderiza o formulário HTML normalmente
+//  — POST com url_previa definido (fase AJAX): devolve JSON puro
+//  — POST sem url_previa (submissão directa, fallback): renderiza HTML
+// ════════════════════════════════════════════════════════════════════════════
+
 include "verifica_login.php";
 include "conexao.php";
 include "info_usuario.php";
@@ -10,53 +16,189 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 
 if (!isset($_SESSION['usuario'])) {
+    // Se for pedido AJAX responde em JSON; caso contrário redireciona
+    if (!empty($_POST['url_previa'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Sessão expirada. Faça login novamente.']);
+        exit;
+    }
     header("Location: login.php");
     exit;
 }
 
-$usuario       = $_SESSION['usuario'];
-$mensagem      = "";
-$tipo_mensagem = "info";
-$redirecionar  = false;
+$usuario = $_SESSION['usuario'];
 
-// ── Categorias para o formulário ──
-$lista_categorias = $conexao
-    ->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria")
-    ->fetchAll();
+// ── Detectar se é chamada AJAX (fase 3) ──────────────────────────────────────
+// O JS envia sempre url_previa quando está na fase 3 de gravação na BD.
+$is_ajax = $_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['url_previa']);
 
-// ── Processar POST ──
-// Nesta arquitectura o JS já fez os uploads para a Cloudinary e envia
-// apenas as URLs (url_previa, url_imagem) + os campos de texto do formulário.
-// Os ficheiros binários já NÃO chegam aqui.
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// ════════════════════════════════════════════════════════════════════════════
+//  BLOCO JSON — só corre quando é chamada AJAX
+// ════════════════════════════════════════════════════════════════════════════
+if ($is_ajax) {
+    header('Content-Type: application/json');
+
+    // Recolher dados recebidos (para debug em caso de erro)
+    $dados_recebidos = [
+        'nome_video'   => $_POST['nome_video']   ?? null,
+        'descricao'    => $_POST['descricao']    ?? null,
+        'preco'        => $_POST['preco']        ?? null,
+        'duracao'      => $_POST['duracao']      ?? null,
+        'categorias'   => $_POST['categorias']   ?? [],
+        'url_previa'   => $_POST['url_previa']   ?? null,
+        'url_imagem'   => $_POST['url_imagem']   ?? null,
+        'id_usuario'   => $usuario['id_usuario'] ?? null,
+    ];
 
     $nome_video              = trim($_POST['nome_video']  ?? '');
     $descricao               = trim($_POST['descricao']   ?? '');
     $preco                   = floatval($_POST['preco']   ?? 0);
-   $duracao_raw = trim($_POST['duracao'] ?? '');
-    $duracao = !empty($duracao_raw) ? $duracao_raw : null;
+    $duracao_raw             = trim($_POST['duracao']     ?? '');
+    $duracao                 = $duracao_raw !== '' ? $duracao_raw : null;
     $categorias_selecionadas = $_POST['categorias']       ?? [];
     $caminho_previa          = trim($_POST['url_previa']  ?? '');
     $caminho_imagem          = trim($_POST['url_imagem']  ?? '');
 
-    // ── Validações ──
-    if (empty($nome_video)) {
-        $mensagem      = "⚠️ O nome do vídeo é obrigatório.";
+    // ── Validações ────────────────────────────────────────────────────────
+    if ($nome_video === '') {
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'O nome do vídeo é obrigatório.',
+            'debug'    => $dados_recebidos,
+        ]);
+        exit;
+    }
+    if (empty($categorias_selecionadas)) {
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'Selecione pelo menos uma categoria.',
+            'debug'    => $dados_recebidos,
+        ]);
+        exit;
+    }
+    if ($caminho_previa === '') {
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'A URL da prévia não foi recebida. Tente novamente.',
+            'debug'    => $dados_recebidos,
+        ]);
+        exit;
+    }
+    if ($caminho_imagem === '') {
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'A URL da imagem não foi recebida. Tente novamente.',
+            'debug'    => $dados_recebidos,
+        ]);
+        exit;
+    }
+
+    // ── Gravar na base de dados ───────────────────────────────────────────
+    try {
+        $conexao->beginTransaction();
+
+        $stmt_video = $conexao->prepare("
+            INSERT INTO video
+                (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id_video
+        ");
+        $stmt_video->execute([
+            $nome_video,
+            $descricao,
+            $preco,
+            $duracao,
+            $caminho_previa,
+            $usuario['id_usuario'],
+        ]);
+
+        $row      = $stmt_video->fetch(PDO::FETCH_ASSOC);
+        $id_video = $row['id_video'] ?? null;
+
+        if (empty($id_video)) {
+            throw new Exception("RETURNING não devolveu id_video. Row: " . json_encode($row));
+        }
+
+        // Categorias
+        $stmt_cat = $conexao->prepare(
+            "INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)"
+        );
+        foreach ($categorias_selecionadas as $id_categoria) {
+            $stmt_cat->execute([$id_video, (int)$id_categoria]);
+        }
+
+        // Imagem de destaque
+        $conexao->prepare(
+            "INSERT INTO video_imagem (id_video, caminho_imagem, imagem_principal)
+             VALUES (?, ?, true)"
+        )->execute([$id_video, $caminho_imagem]);
+
+        $conexao->commit();
+
+        echo json_encode([
+            'status'   => 'ok',
+            'id_video' => $id_video,
+            'mensagem' => 'Vídeo cadastrado com sucesso!',
+        ]);
+
+    } catch (Exception $e) {
+        if ($conexao->inTransaction()) {
+            $conexao->rollBack();
+        }
+        $msg_erro = $e->getMessage();
+        error_log("ERRO CADASTRO VIDEO: " . $msg_erro . " | Trace: " . $e->getTraceAsString());
+
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'Erro ao gravar na base de dados: ' . $msg_erro,
+            'debug'    => $dados_recebidos,
+        ]);
+    }
+
+    exit; // Nunca renderiza HTML quando é AJAX
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BLOCO HTML — GET ou POST de fallback (sem AJAX)
+// ════════════════════════════════════════════════════════════════════════════
+
+$mensagem      = "";
+$tipo_mensagem = "info";
+$redirecionar  = false;
+
+// Categorias para o formulário
+$lista_categorias = $conexao
+    ->query("SELECT id_categoria, nome_categoria FROM categoria ORDER BY nome_categoria")
+    ->fetchAll();
+
+// POST de fallback (navegadores sem JS, por exemplo)
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $nome_video              = trim($_POST['nome_video']  ?? '');
+    $descricao               = trim($_POST['descricao']   ?? '');
+    $preco                   = floatval($_POST['preco']   ?? 0);
+    $duracao_raw             = trim($_POST['duracao']     ?? '');
+    $duracao                 = $duracao_raw !== '' ? $duracao_raw : null;
+    $categorias_selecionadas = $_POST['categorias']       ?? [];
+    $caminho_previa          = trim($_POST['url_previa']  ?? '');
+    $caminho_imagem          = trim($_POST['url_imagem']  ?? '');
+
+    if ($nome_video === '') {
+        $mensagem = "⚠️ O nome do vídeo é obrigatório.";
         $tipo_mensagem = "error";
     } elseif (empty($categorias_selecionadas)) {
-        $mensagem      = "⚠️ Selecione pelo menos uma categoria.";
+        $mensagem = "⚠️ Selecione pelo menos uma categoria.";
         $tipo_mensagem = "error";
-    } elseif (empty($caminho_previa)) {
-        $mensagem      = "⚠️ A URL da prévia não foi recebida. Tente novamente.";
+    } elseif ($caminho_previa === '') {
+        $mensagem = "⚠️ A URL da prévia não foi recebida. Tente novamente.";
         $tipo_mensagem = "error";
-    } elseif (empty($caminho_imagem)) {
-        $mensagem      = "⚠️ A URL da imagem não foi recebida. Tente novamente.";
+    } elseif ($caminho_imagem === '') {
+        $mensagem = "⚠️ A URL da imagem não foi recebida. Tente novamente.";
         $tipo_mensagem = "error";
     } else {
-        // ── Gravar na base de dados ──
-        $conexao->beginTransaction();
         try {
-            // Inserir vídeo e obter o id gerado
+            $conexao->beginTransaction();
+
             $stmt_video = $conexao->prepare("
                 INSERT INTO video
                     (nome_video, descricao, preco, duracao, caminho_previa, id_usuario)
@@ -64,21 +206,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 RETURNING id_video
             ");
             $stmt_video->execute([
-                $nome_video,
-                $descricao,
-                $preco,
-                $duracao,
-                $caminho_previa,
-                $usuario['id_usuario'],
+                $nome_video, $descricao, $preco, $duracao,
+                $caminho_previa, $usuario['id_usuario'],
             ]);
+
             $row      = $stmt_video->fetch(PDO::FETCH_ASSOC);
-            $id_video = $row['id_video'];
+            $id_video = $row['id_video'] ?? null;
 
             if (empty($id_video)) {
                 throw new Exception("Não foi possível obter o id do vídeo após inserção.");
             }
 
-            // Inserir categorias
             $stmt_cat = $conexao->prepare(
                 "INSERT INTO video_categoria (id_video, id_categoria) VALUES (?, ?)"
             );
@@ -86,7 +224,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $stmt_cat->execute([$id_video, (int)$id_categoria]);
             }
 
-            // Inserir imagem de destaque
             $conexao->prepare(
                 "INSERT INTO video_imagem (id_video, caminho_imagem, imagem_principal)
                  VALUES (?, ?, true)"
@@ -98,8 +235,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $redirecionar  = true;
 
         } catch (Exception $e) {
-            $conexao->rollBack();
-            error_log("ERRO CADASTRO VIDEO: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+            if ($conexao->inTransaction()) $conexao->rollBack();
+            error_log("ERRO CADASTRO VIDEO: " . $e->getMessage());
             $mensagem      = "❌ Erro ao gravar na base de dados: " . $e->getMessage();
             $tipo_mensagem = "error";
         }
@@ -131,7 +268,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
         .checkbox-item { display: flex; align-items: center; gap: 8px; }
         .preview-container { margin-top: 15px; }
-        .preview-container img { max-width: 300px; border-radius: 8px; }
+        .preview-container img  { max-width: 300px; border-radius: 8px; }
         .preview-container video { max-width: 500px; border-radius: 8px; }
 
         /* ── Barras de progresso ── */
@@ -267,7 +404,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <!-- ── Upload Prévia ── -->
                 <div class="form-group">
                     <label>Prévia do Vídeo * (MP4, WebM ou OGG — Máx: 100MB)</label>
-                    <input type="file" name="video_previa" id="video_previa" accept="video/*" class="file-input" required>
+                    <input type="file" name="video_previa" id="video_previa" accept="video/*" class="file-input">
                     <div class="drop-zone" id="dropZonePrevia">
                         <div class="drop-zone-text">Arraste e solte a prévia aqui</div>
                         <button type="button" onclick="document.getElementById('video_previa').click()">
@@ -294,7 +431,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <!-- ── Upload Imagem ── -->
                 <div class="form-group">
                     <label>Imagem de Destaque * (JPG, PNG ou WebP — Máx: 5MB)</label>
-                    <input type="file" name="imagem_destaque" id="imagem_destaque" accept="image/*" class="file-input" required>
+                    <input type="file" name="imagem_destaque" id="imagem_destaque" accept="image/*" class="file-input">
                     <div class="drop-zone" id="dropZoneImagem">
                         <div class="drop-zone-text">Arraste e solte a imagem aqui</div>
                         <button type="button" onclick="document.getElementById('imagem_destaque').click()">
@@ -412,7 +549,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // Progresso de leitura local (FileReader) — indica que o ficheiro foi lido
     function showLocalReadProgress(file, suffix) {
         const wrapper = document.getElementById('progressWrapper' + suffix);
         const bar     = document.getElementById('progressBar'     + suffix);
@@ -458,7 +594,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     //  SUBMISSÃO EM 3 FASES:
     //   1. Upload do vídeo  → upload_cloudinary.php
     //   2. Upload da imagem → upload_cloudinary.php
-    //   3. Gravar metadados → cadastrar_video.php (este ficheiro)
+    //   3. Gravar metadados → cadastrar_video.php (devolve JSON)
     // ════════════════════════════════════════════════════════
     document.getElementById('uploadForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -471,7 +607,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         const fileImagem = document.getElementById('imagem_destaque').files[0];
         const nomeVideo  = document.getElementById('nome_video').value.trim();
 
-        // Validações rápidas antes de começar
+        // Validações rápidas no cliente
         if (!nomeVideo)  { mostrarErroInline('⚠️ Por favor, preencha o nome do vídeo.'); return; }
         if (!filePrevia) { mostrarErroInline('⚠️ Por favor, selecione a prévia do vídeo.'); return; }
         if (!fileImagem) { mostrarErroInline('⚠️ Por favor, selecione a imagem de destaque.'); return; }
@@ -482,21 +618,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         resetOverlayBar('Imagem');
 
         try {
-            // ── Fase 1: Upload do vídeo ──
+            // ── Fase 1: Upload do vídeo ──────────────────────────────────
             stepEl.textContent = 'Passo 1/3 — A enviar a prévia do vídeo…';
             const urlPrevia = await uploadComProgresso(filePrevia, 'video', 'Previa');
 
-            // ── Fase 2: Upload da imagem ──
+            // ── Fase 2: Upload da imagem ─────────────────────────────────
             stepEl.textContent = 'Passo 2/3 — A enviar a imagem de destaque…';
             const urlImagem = await uploadComProgresso(fileImagem, 'imagem', 'Imagem');
 
-            // ── Fase 3: Gravar na BD ──
+            // ── Fase 3: Gravar na BD (resposta JSON) ─────────────────────
             stepEl.textContent = 'Passo 3/3 — A guardar na base de dados…';
+
             const formData = new FormData(form);
-            // Remove os ficheiros binários — já não são necessários
             formData.delete('video_previa');
             formData.delete('imagem_destaque');
-            // Envia as URLs obtidas da Cloudinary
             formData.append('url_previa', urlPrevia);
             formData.append('url_imagem', urlImagem);
 
@@ -505,38 +640,57 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 body: formData,
             });
 
+            // Garantir que a resposta existe
             if (!resp.ok) {
                 throw new Error(`Erro HTTP ${resp.status} ao gravar na base de dados.`);
             }
 
-            const html = await resp.text();
-            const doc  = new DOMParser().parseFromString(html, 'text/html');
-            const msg  = doc.querySelector('.mensagem');
+            // Fazer parse do JSON — se falhar, mostrar o texto raw para diagnóstico
+            let data;
+            const rawText = await resp.text();
+            try {
+                data = JSON.parse(rawText);
+            } catch (_) {
+                // O servidor devolveu HTML em vez de JSON — mostrar os primeiros 300 chars
+                overlay.classList.remove('visible');
+                submitBtn.disabled = false;
+                mostrarErroInline(
+                    '❌ Resposta inesperada do servidor (não é JSON). ' +
+                    'Verifique os logs do Render. Início da resposta: ' +
+                    rawText.substring(0, 300).replace(/</g, '&lt;')
+                );
+                console.error('Resposta raw do servidor:', rawText);
+                return;
+            }
 
             overlay.classList.remove('visible');
             submitBtn.disabled = false;
 
-            if (msg && msg.classList.contains('success')) {
-                // Sucesso — mostra mensagem e redireciona
-                const existente = document.querySelector('.mensagem');
-                if (existente) existente.remove();
-                document.querySelector('.main h1').insertAdjacentElement('afterend', msg);
+            if (data.status === 'ok') {
+                // ✅ Sucesso — mostrar mensagem e redirecionar
+                mostrarSucessoInline('✅ ' + (data.mensagem || 'Vídeo cadastrado com sucesso!'));
                 setTimeout(() => { window.location.href = 'gerenciar_videos.php'; }, 2000);
-            } else if (msg) {
-                // Erro devolvido pelo servidor
-                mostrarErroInline(msg.textContent);
             } else {
-                mostrarErroInline('❌ Resposta inesperada do servidor. Verifique os logs.');
+                // ❌ Erro devolvido pelo servidor em JSON
+                const detalhe = data.mensagem || 'Erro desconhecido.';
+                mostrarErroInline('❌ ' + detalhe);
+                // Mostrar debug na consola para diagnóstico
+                if (data.debug) {
+                    console.group('🔍 Debug — dados recebidos pelo servidor');
+                    console.table(data.debug);
+                    console.groupEnd();
+                }
             }
 
         } catch (err) {
             overlay.classList.remove('visible');
             submitBtn.disabled = false;
             mostrarErroInline('❌ ' + err.message);
+            console.error('Erro na submissão:', err);
         }
     });
 
-    // Faz o upload de um ficheiro para upload_cloudinary.php com barra de progresso
+    // ── Upload com barra de progresso ─────────────────────────────────────────
     function uploadComProgresso(file, tipo, suffix) {
         return new Promise((resolve, reject) => {
             const fd = new FormData();
@@ -562,20 +716,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 let data;
                 try {
                     data = JSON.parse(xhr.responseText);
-                } catch (ex) {
-                    reject(new Error('Resposta inválida do servidor de upload.'));
+                } catch (_) {
+                    reject(new Error('Resposta inválida do servidor de upload (não é JSON).'));
                     return;
                 }
                 if (data.erro) {
                     reject(new Error(data.erro));
                     return;
                 }
-                // Marca a barra como concluída
+                if (!data.url) {
+                    reject(new Error('O servidor de upload não devolveu uma URL.'));
+                    return;
+                }
                 updateBar(suffix, 100, file.size, file.size, 0);
                 resolve(data.url);
             };
 
-            xhr.onerror = () => reject(new Error('Erro de rede durante o upload. Verifique a sua ligação.'));
+            xhr.onerror   = () => reject(new Error('Erro de rede durante o upload.'));
             xhr.ontimeout = () => reject(new Error('Timeout: o upload demorou demasiado.'));
 
             xhr.open('POST', 'upload_cloudinary.php', true);
@@ -592,8 +749,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         const sizeEl  = document.getElementById('overlaySize'  + suffix);
         const speedEl = document.getElementById('overlaySpeed' + suffix);
 
-        bar.style.width   = pct + '%';
-        pctEl.textContent = pct + '%';
+        bar.style.width     = pct + '%';
+        pctEl.textContent   = pct + '%';
         sizeEl.textContent  = `${formatBytes(loaded)} / ${formatBytes(total)}`;
         speedEl.textContent = speed > 0 ? `${formatBytes(speed)}/s` : '';
 
@@ -613,12 +770,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     function mostrarErroInline(texto) {
+        _mostrarMensagem(texto, 'error');
+    }
+
+    function mostrarSucessoInline(texto) {
+        _mostrarMensagem(texto, 'success');
+    }
+
+    function _mostrarMensagem(texto, tipo) {
         const existente = document.querySelector('.mensagem');
         if (existente) existente.remove();
         const div = document.createElement('div');
-        div.className   = 'mensagem error';
+        div.className   = 'mensagem ' + tipo;
         div.textContent = texto;
         document.querySelector('.main h1').insertAdjacentElement('afterend', div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function formatBytes(bytes) {
