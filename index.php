@@ -1,4 +1,4 @@
-9<?php
+<?php
 // index.php
 include "verifica_login_opcional.php";
 include "conexao.php";
@@ -10,7 +10,7 @@ $usuarioLogado = $_SESSION['usuario'] ?? null;
 $id_perfil     = $usuarioLogado['idperfil'] ?? null;
 $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
-$WHATSAPP_NUMBER = "258871054204";
+$WHATSAPP_NUMBER = "";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
