@@ -11,7 +11,7 @@ $id_perfil     = $usuarioLogado['idperfil'] ?? null;
 $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
 // ── INSIRA O SEU LINK DO TELEGRAM AQUI ──
-$TELEGRAM_LINK = "https://t.me/SEU_USERNAME_AQUI";
+$TELEGRAM_LINK = "https://t.me/donaldo258";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
@@ -103,12 +103,16 @@ $total_encontrados = count($videos);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VideoHub — Premium Video Store</title>
+<title>DarkVelvetClub — Premium Video Store</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
+
+<!-- SVG favicon: faceted diamond on dark background -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a0a0f'/%3E%3Cpath d='M32 8 L56 26 L46 56 L18 56 L8 26 Z' fill='none' stroke='%23d4a843' stroke-width='2' stroke-linejoin='round' opacity='0.5'/%3E%3Cpath d='M32 8 L56 26 L32 38 L8 26 Z' fill='%23d4a843' opacity='0.9'/%3E%3Cpath d='M32 38 L56 26 L46 56 Z' fill='%23b8861e' opacity='0.75'/%3E%3Cpath d='M32 38 L8 26 L18 56 Z' fill='%23c49430' opacity='0.6'/%3E%3Cpath d='M32 38 L46 56 L18 56 Z' fill='%238a6010' opacity='0.5'/%3E%3Cellipse cx='32' cy='28' rx='5' ry='3' fill='white' opacity='0.15' transform='rotate(-15 32 28)'/%3E%3C/svg%3E">
+
 <style>
 /* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -157,16 +161,45 @@ body {
     justify-content: space-between;
     height: 64px;
 }
+
+/* ── LOGO ── */
 .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.8rem;
-    letter-spacing: 2px;
-    color: var(--gold);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 11px;
+    text-decoration: none;
 }
-.logo span { color: var(--text); }
+.logo-icon { width: 38px; height: 38px; flex-shrink: 0; }
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    gap: 1px;
+}
+.logo-text .l-dark  {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+.logo-text .l-velvet {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.45rem;
+    letter-spacing: 3px;
+    color: var(--gold);
+    line-height: 1;
+}
+.logo-text .l-club {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
 .nav-links {
     display: flex;
     align-items: center;
@@ -182,10 +215,7 @@ body {
     transition: all 0.2s;
     letter-spacing: 0.3px;
 }
-.nav-links a:hover {
-    color: var(--text);
-    background: var(--surface2);
-}
+.nav-links a:hover { color: var(--text); background: var(--surface2); }
 
 /* ── HERO BANNER ── */
 .hero {
@@ -226,10 +256,7 @@ body {
     color: var(--text);
     margin-bottom: 14px;
 }
-.hero h1 em {
-    font-style: normal;
-    color: var(--gold);
-}
+.hero h1 em { font-style: normal; color: var(--gold); }
 .hero p {
     color: var(--muted);
     font-size: 1rem;
@@ -277,10 +304,7 @@ body {
     margin-bottom: 16px;
     transition: all 0.2s;
 }
-.filter-toggle-btn:hover {
-    border-color: var(--gold);
-    color: var(--gold);
-}
+.filter-toggle-btn:hover { border-color: var(--gold); color: var(--gold); }
 .filter-toggle-btn .fa-chevron-down {
     transition: transform 0.3s;
     font-size: 0.75rem;
@@ -338,15 +362,9 @@ body {
     appearance: none;
 }
 .filter-group input:focus,
-.filter-group select:focus {
-    border-color: var(--gold);
-}
+.filter-group select:focus { border-color: var(--gold); }
 .filter-group input::placeholder { color: var(--muted); }
-.filter-buttons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
+.filter-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-filter {
     display: inline-flex;
     align-items: center;
@@ -360,16 +378,9 @@ body {
     border: none;
     transition: all 0.2s;
 }
-.btn-primary {
-    background: var(--gold);
-    color: #0a0a0f;
-}
+.btn-primary { background: var(--gold); color: #0a0a0f; }
 .btn-primary:hover { background: var(--gold-light); }
-.btn-secondary {
-    background: var(--surface2);
-    color: var(--muted);
-    border: 1px solid var(--border);
-}
+.btn-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
 
 /* ── COUNT BAR ── */
@@ -487,19 +498,11 @@ body {
     color: var(--muted);
 }
 .video-stats span { display: flex; align-items: center; gap: 5px; }
-.online-badge {
-    color: #4ade80 !important;
-    font-weight: 600;
-}
+.online-badge { color: #4ade80 !important; font-weight: 600; }
 .online-badge i { font-size: 0.5rem; }
 
 /* ── ACTION BUTTONS ── */
-.action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: auto;
-}
+.action-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
 .action-btn {
     display: flex;
     align-items: center;
@@ -516,24 +519,13 @@ body {
     transition: all 0.2s;
     letter-spacing: 0.2px;
 }
-/* Row layout for preview + telegram */
-.action-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
+.action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .btn-preview {
     background: var(--surface2);
     color: var(--muted);
     border: 1px solid var(--border);
 }
-.btn-preview:hover {
-    background: var(--surface);
-    color: var(--text);
-    border-color: var(--muted);
-}
-
+.btn-preview:hover { background: var(--surface); color: var(--text); border-color: var(--muted); }
 .btn-telegram {
     background: linear-gradient(135deg, #2AABEE, #1a8fc4);
     color: #fff;
@@ -543,7 +535,6 @@ body {
     background: linear-gradient(135deg, #1a8fc4, #0f6d9e);
     box-shadow: 0 6px 20px rgba(42,171,238,0.35);
 }
-
 .btn-buy {
     background: linear-gradient(135deg, var(--gold), #b8861e);
     color: #0a0a0f;
@@ -562,13 +553,7 @@ body {
 .btn-buy i { font-size: 1rem; }
 
 /* ── PAGINATION ── */
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 48px;
-    flex-wrap: wrap;
-}
+.pagination { display: flex; justify-content: center; gap: 6px; margin-top: 48px; flex-wrap: wrap; }
 .pagination a {
     display: inline-flex;
     align-items: center;
@@ -585,11 +570,7 @@ body {
     transition: all 0.2s;
 }
 .pagination a:hover { border-color: var(--gold); color: var(--gold); }
-.pagination a.active {
-    background: var(--gold);
-    border-color: var(--gold);
-    color: #0a0a0f;
-}
+.pagination a.active { background: var(--gold); border-color: var(--gold); color: #0a0a0f; }
 
 /* ── MODAL ── */
 .modal {
@@ -626,12 +607,7 @@ body {
     line-height: 1;
 }
 .close-modal:hover { color: var(--text); }
-.video-player {
-    width: 100%;
-    display: block;
-    max-height: 80vh;
-    background: #000;
-}
+.video-player { width: 100%; display: block; max-height: 80vh; background: #000; }
 
 /* ── TOAST ── */
 #infoToast {
@@ -727,6 +703,7 @@ body {
     .hero-trust { gap: 14px; }
     .nav-links a { padding: 6px 10px; font-size: 0.82rem; }
     #infoToast { max-width: calc(100vw - 32px); right: 16px; bottom: 16px; }
+    .logo-text .l-velvet { font-size: 1.15rem; }
 }
 </style>
 </head>
@@ -754,7 +731,26 @@ body {
 <!-- ── TOPBAR ── -->
 <div class="topbar">
     <div class="container">
-        <div class="logo">🎬 <span>Video</span>Hub</div>
+        <a href="index.php" class="logo">
+            <!-- Faceted diamond SVG icon -->
+            <svg class="logo-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <rect width="64" height="64" rx="13" fill="#0a0a0f"/>
+                <path d="M32 8 L56 26 L46 56 L18 56 L8 26 Z"
+                      fill="none" stroke="#d4a843" stroke-width="2"
+                      stroke-linejoin="round" opacity="0.45"/>
+                <path d="M32 8 L56 26 L32 38 L8 26 Z" fill="#d4a843" opacity="0.92"/>
+                <path d="M32 38 L56 26 L46 56 Z"      fill="#b8861e" opacity="0.78"/>
+                <path d="M32 38 L8 26 L18 56 Z"       fill="#c49430" opacity="0.62"/>
+                <path d="M32 38 L46 56 L18 56 Z"      fill="#8a6010" opacity="0.52"/>
+                <ellipse cx="32" cy="26" rx="4.5" ry="2.5" fill="white"
+                         opacity="0.18" transform="rotate(-18 32 26)"/>
+            </svg>
+            <div class="logo-text">
+                <span class="l-dark">DARK</span>
+                <span class="l-velvet">VELVET</span>
+                <span class="l-club">CLUB</span>
+            </div>
+        </a>
         <div class="nav-links">
             <a href="index.php"><i class="fas fa-house"></i> Home</a>
             <a href="#">Videos</a>
@@ -769,9 +765,9 @@ body {
 
 <!-- ── HERO ── -->
 <div class="hero">
-    <div class="hero-eyebrow"><i class="fas fa-bolt"></i> Instant Access</div>
-    <h1>Premium <em>Videos</em><br>Delivered Fast</h1>
-    <p>Browse our exclusive collection. Pay securely via Telegram and get your video immediately.</p>
+    <div class="hero-eyebrow"><i class="fas fa-gem"></i> Members-Only Collection</div>
+    <h1>Dark<em>Velvet</em>Club</h1>
+    <p>An exclusive vault of premium videos. Browse freely, buy instantly — no membership required.</p>
     <div class="hero-trust">
         <span class="trust-pill"><i class="fas fa-shield-halved"></i> Secure Purchase</span>
         <span class="trust-pill"><i class="fab fa-telegram"></i> Fast Delivery</span>
@@ -875,8 +871,8 @@ body {
                              alt="<?= htmlspecialchars($v['nome_video']) ?>"
                              loading="lazy">
                     <?php else: ?>
-                        <div class="video-thumbnail" style="background: linear-gradient(135deg, #1a1a26 0%, #12121a 100%); display:flex; align-items:center; justify-content:center;">
-                            <i class="fas fa-film" style="font-size:3rem; color:rgba(212,168,67,0.2);"></i>
+                        <div class="video-thumbnail" style="background:linear-gradient(135deg,#1a1a26 0%,#12121a 100%);display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-film" style="font-size:3rem;color:rgba(212,168,67,0.2);"></i>
                         </div>
                     <?php endif; ?>
 
@@ -904,7 +900,7 @@ body {
                             </button>
                             <a href="<?= $link_telegram ?>" target="_blank" rel="noopener"
                                class="action-btn btn-telegram">
-                                <i class="fab fa-telegram"></i> Chat
+                                <i class="fab fa-telegram"></i> Telegram
                             </a>
                         </div>
                         <a href="<?= $link_telegram ?>" target="_blank" rel="noopener"
