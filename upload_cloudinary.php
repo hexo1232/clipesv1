@@ -1,14 +1,8 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-echo json_encode([
-    'debug_session' => session_id(),
-    'usuario'       => $_SESSION['usuario'] ?? 'NAO AUTENTICADO',
-    'post_tipo'     => $_POST['tipo'] ?? 'sem tipo',
-    'file_recebido' => isset($_FILES['arquivo']) ? $_FILES['arquivo']['name'] : 'nenhum',
-]);
-exit;
-include "verifica_login.php";
+// upload_cloudinary.php
+// Recebe um ficheiro (vídeo ou imagem), faz upload para a Cloudinary e devolve JSON.
+
+include "verifica_login.php";   // já chama session_start() internamente
 include "conexao.php";
 
 $cloudinary = require __DIR__ . '/config/cloudinary.php';
@@ -24,7 +18,7 @@ if (!isset($_SESSION['usuario'])) {
 $tipo    = trim($_POST['tipo'] ?? '');   // 'video' ou 'imagem'
 $arquivo = $_FILES['arquivo'] ?? null;
 
-// ── Validações básicas ──
+// ── Validações básicas ──────────────────────────────────────────────────────
 if (empty($tipo) || !in_array($tipo, ['video', 'imagem'])) {
     echo json_encode(['erro' => 'Tipo de ficheiro inválido. Use "video" ou "imagem".']);
     exit;
@@ -51,12 +45,10 @@ if (!file_exists($arquivo['tmp_name']) || !is_readable($arquivo['tmp_name'])) {
     exit;
 }
 
-// ── Upload para a Cloudinary ──
+// ── Upload para a Cloudinary ────────────────────────────────────────────────
 try {
     if ($tipo === 'video') {
-        // Vídeos podem demorar — aumenta o limite de tempo só para este script
         set_time_limit(300);
-
         $result = $cloudinary->uploadApi()->upload(
             $arquivo['tmp_name'],
             [
@@ -66,7 +58,6 @@ try {
         );
     } else {
         set_time_limit(120);
-
         $result = $cloudinary->uploadApi()->upload(
             $arquivo['tmp_name'],
             [
