@@ -1,8 +1,7 @@
-<?php
+9<?php
 // index.php
 include "verifica_login_opcional.php";
 include "conexao.php";
-
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -11,7 +10,7 @@ $usuarioLogado = $_SESSION['usuario'] ?? null;
 $id_perfil     = $usuarioLogado['idperfil'] ?? null;
 $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
-$WHATSAPP_NUMBER = "876821594";
+$WHATSAPP_NUMBER = "258871054204";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
@@ -178,6 +177,8 @@ $total_encontrados = count($videos);
 }
 #infoToast .toast-row.whatsapp i { color: #25D366; }
 #infoToast .toast-row.telegram  i { color: #2AABEE; }
+#infoToast .toast-row.account   i { color: #f1c40f; }
+
 #infoToast .toast-row span strong {
     display: block;
     font-size: 0.82rem;
@@ -190,7 +191,6 @@ $total_encontrados = count($videos);
 </head>
 <body>
 
-<!-- Toast -->
 <div id="infoToast">
     <div class="toast-header">
         <span class="toast-title">
@@ -200,6 +200,15 @@ $total_encontrados = count($videos);
             <i class="fas fa-xmark"></i>
         </button>
     </div>
+    
+    <div class="toast-row account">
+        <i class="fas fa-user-clock"></i>
+        <span>
+            <strong>Access</strong>
+            Login is optional. You can browse and buy without an account.
+        </span>
+    </div>
+
     <div class="toast-row whatsapp">
         <i class="fab fa-whatsapp"></i>
         <span>
@@ -216,7 +225,6 @@ $total_encontrados = count($videos);
     </div>
 </div>
 
-<!-- Topbar -->
 <div class="topbar">
     <div class="container">
         <div class="logo">🎬 VideoHub</div>
@@ -232,7 +240,6 @@ $total_encontrados = count($videos);
     </div>
 </div>
 
-<!-- Main Container -->
 <div class="main-container">
 
     <button class="filter-toggle-btn" id="filterToggle">
@@ -305,7 +312,6 @@ $total_encontrados = count($videos);
         <i class="fas fa-video"></i> <?= $total_encontrados ?> video(s) found
     </div>
 
-    <!-- Videos Grid -->
     <div class="videos-grid">
         <?php foreach ($videos as $v): ?>
             <div class="video-card">
@@ -376,7 +382,6 @@ $total_encontrados = count($videos);
 
 </div>
 
-<!-- Video Player Modal -->
 <div id="modalPreview" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="fecharPreview()">&times;</span>
