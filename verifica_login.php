@@ -1,4 +1,5 @@
 <?php
+//verifica_login.php
 // Certifique-se de que não há NADA antes do <?php acima
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
