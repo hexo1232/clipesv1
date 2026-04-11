@@ -103,7 +103,7 @@ foreach ($conexao->query($queryDistribuicao)->fetchAll() as $row) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dashboard - Repositório de Vídeos</title>
-    <script src="logout_auto.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/admin.css">
     <script src="js/darkmode2.js"></script>
