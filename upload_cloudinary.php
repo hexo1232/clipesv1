@@ -1,21 +1,20 @@
 <?php
-include "verifica_login.php";  
+// upload_cloudinary.php
+include "verifica_login.php";
 include "conexao.php";
 
 $cloudinary = require __DIR__ . '/config/cloudinary.php';
 
 header('Content-Type: application/json');
 
-// Garante que só utilizadores autenticados acedem
 if (!isset($_SESSION['usuario'])) {
     echo json_encode(['erro' => 'Não autenticado.']);
     exit;
 }
 
-$tipo    = trim($_POST['tipo'] ?? '');   // 'video' ou 'imagem'
+$tipo    = trim($_POST['tipo'] ?? '');
 $arquivo = $_FILES['arquivo'] ?? null;
 
-// ── Validações básicas ──────────────────────────────────────────────────────
 if (empty($tipo) || !in_array($tipo, ['video', 'imagem'])) {
     echo json_encode(['erro' => 'Tipo de ficheiro inválido. Use "video" ou "imagem".']);
     exit;
@@ -42,25 +41,18 @@ if (!file_exists($arquivo['tmp_name']) || !is_readable($arquivo['tmp_name'])) {
     exit;
 }
 
-// ── Upload para a Cloudinary ────────────────────────────────────────────────
 try {
     if ($tipo === 'video') {
         set_time_limit(300);
         $result = $cloudinary->uploadApi()->upload(
             $arquivo['tmp_name'],
-            [
-                'resource_type' => 'video',
-                'folder'        => 'videos/previas',
-            ]
+            ['resource_type' => 'video', 'folder' => 'videos/previas']
         );
     } else {
         set_time_limit(120);
         $result = $cloudinary->uploadApi()->upload(
             $arquivo['tmp_name'],
-            [
-                'resource_type' => 'image',
-                'folder'        => 'videos/imagens',
-            ]
+            ['resource_type' => 'image', 'folder' => 'videos/imagens']
         );
     }
 
