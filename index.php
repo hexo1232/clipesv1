@@ -99,11 +99,11 @@ $videos           = $stmt->fetchAll();
 $total_encontrados = count($videos);
 ?>
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Repositório de Vídeos</title>
+<title>Video Repository</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
 <style>
@@ -224,7 +224,7 @@ $total_encontrados = count($videos);
             <a href="index.php">Home</a>
             <a href="#">Videos</a>
             <?php if ($usuarioLogado): ?>
-                <a href="logout.php">Sair</a>
+                <a href="logout.php">Sign Out</a>
             <?php else: ?>
                 <a href="login.php">Login</a>
             <?php endif; ?>
@@ -232,30 +232,30 @@ $total_encontrados = count($videos);
     </div>
 </div>
 
-<!-- Container Principal -->
+<!-- Main Container -->
 <div class="main-container">
 
     <button class="filter-toggle-btn" id="filterToggle">
         <i class="fas fa-filter"></i>
-        <span>Mostrar Filtros</span>
+        <span>Show Filters</span>
         <i class="fas fa-chevron-down"></i>
     </button>
 
     <div class="filters" id="filtersContainer">
-        <h2><i class="fas fa-filter"></i> Filtros de Busca</h2>
+        <h2><i class="fas fa-filter"></i> Search Filters</h2>
         <form method="get">
             <div class="filter-grid">
 
                 <div class="filter-group">
-                    <label>Buscar Vídeo</label>
-                    <input type="text" name="busca" placeholder="Nome do vídeo..."
+                    <label>Search Video</label>
+                    <input type="text" name="busca" placeholder="Video name..."
                            value="<?= htmlspecialchars($_GET['busca'] ?? '') ?>">
                 </div>
 
                 <div class="filter-group">
-                    <label>Categoria</label>
+                    <label>Category</label>
                     <select name="categoria">
-                        <option value="">Todas</option>
+                        <option value="">All</option>
                         <?php foreach ($lista_categorias as $cat): ?>
                             <option value="<?= $cat['id_categoria'] ?>"
                                 <?= isset($_GET['categoria']) && $_GET['categoria'] == $cat['id_categoria'] ? 'selected' : '' ?>>
@@ -266,53 +266,53 @@ $total_encontrados = count($videos);
                 </div>
 
                 <div class="filter-group">
-                    <label>Duração Mínima (min)</label>
-                    <input type="number" name="duracao_min" placeholder="Ex: 5" min="0"
+                    <label>Minimum Duration (min)</label>
+                    <input type="number" name="duracao_min" placeholder="e.g. 5" min="0"
                            value="<?= htmlspecialchars($_GET['duracao_min'] ?? '') ?>">
                 </div>
 
                 <div class="filter-group">
-                    <label>Duração Máxima (min)</label>
-                    <input type="number" name="duracao_max" placeholder="Ex: 60" min="0"
+                    <label>Maximum Duration (min)</label>
+                    <input type="number" name="duracao_max" placeholder="e.g. 60" min="0"
                            value="<?= htmlspecialchars($_GET['duracao_max'] ?? '') ?>">
                 </div>
 
                 <div class="filter-group">
-                    <label>Preço Mínimo ($)</label>
-                    <input type="number" name="preco_min" placeholder="Ex: 10" min="0" step="0.01"
+                    <label>Minimum Price ($)</label>
+                    <input type="number" name="preco_min" placeholder="e.g. 10" min="0" step="0.01"
                            value="<?= htmlspecialchars($_GET['preco_min'] ?? '') ?>">
                 </div>
 
                 <div class="filter-group">
-                    <label>Preço Máximo ($)</label>
-                    <input type="number" name="preco_max" placeholder="Ex: 100" min="0" step="0.01"
+                    <label>Maximum Price ($)</label>
+                    <input type="number" name="preco_max" placeholder="e.g. 100" min="0" step="0.01"
                            value="<?= htmlspecialchars($_GET['preco_max'] ?? '') ?>">
                 </div>
 
             </div>
             <div class="filter-buttons">
                 <button type="submit" class="btn-filter btn-primary">
-                    <i class="fas fa-search"></i> Pesquisar
+                    <i class="fas fa-search"></i> Search
                 </button>
                 <button type="button" onclick="window.location='index.php'" class="btn-filter btn-secondary">
-                    <i class="fas fa-times"></i> Limpar
+                    <i class="fas fa-times"></i> Clear
                 </button>
             </div>
         </form>
     </div>
 
     <div class="count">
-        <i class="fas fa-video"></i> <?= $total_encontrados ?> vídeo(s) encontrado(s)
+        <i class="fas fa-video"></i> <?= $total_encontrados ?> video(s) found
     </div>
 
-    <!-- Grid de Vídeos -->
+    <!-- Videos Grid -->
     <div class="videos-grid">
         <?php foreach ($videos as $v): ?>
             <div class="video-card">
                 <div class="video-thumbnail-wrapper">
-                 <?php if (!empty($v['caminho_imagem'])): ?>
-    <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>" class="video-thumbnail">
-<?php else: ?>
+                    <?php if (!empty($v['caminho_imagem'])): ?>
+                        <img src="<?= htmlspecialchars($v['caminho_imagem']) ?>" class="video-thumbnail">
+                    <?php else: ?>
                         <div class="video-thumbnail" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                     <?php endif; ?>
 
@@ -376,7 +376,7 @@ $total_encontrados = count($videos);
 
 </div>
 
-<!-- Modal do Player -->
+<!-- Video Player Modal -->
 <div id="modalPreview" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="fecharPreview()">&times;</span>
@@ -407,15 +407,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Toggle Filtros
-const filterToggle    = document.getElementById('filterToggle');
+// Toggle Filters
+const filterToggle     = document.getElementById('filterToggle');
 const filtersContainer = document.getElementById('filtersContainer');
 
 filterToggle.addEventListener('click', function () {
     filtersContainer.classList.toggle('show');
     filterToggle.classList.toggle('active');
     const span = filterToggle.querySelector('span');
-    span.textContent = filtersContainer.classList.contains('show') ? 'Ocultar Filtros' : 'Mostrar Filtros';
+    span.textContent = filtersContainer.classList.contains('show') ? 'Hide Filters' : 'Show Filters';
 });
 
 // Preview
@@ -431,7 +431,7 @@ function abrirPreview(idVideo, caminho) {
 
     fetch(window.location.href, { method: 'POST', body: formData })
         .then(res => res.json())
-        .catch(err => console.error('Erro ao registrar visualização:', err));
+        .catch(err => console.error('Error registering view:', err));
 }
 
 function fecharPreview() {
