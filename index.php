@@ -13,7 +13,7 @@ $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
 
 // ── INSIRA O SEU LINK DO TELEGRAM AQUI ──
-$TELEGRAM_LINK = "https://t.me/xxxx";
+$TELEGRAM_LINK = "https://t.me/donaldo258";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
