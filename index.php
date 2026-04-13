@@ -1,5 +1,6 @@
 <?php
 // index.php
+$paypal_client_id = getenv('PAYPAL_CLIENT_ID');
 include "verifica_login_opcional.php";
 include "conexao.php";
 
@@ -10,8 +11,9 @@ $usuarioLogado = $_SESSION['usuario'] ?? null;
 $id_perfil     = $usuarioLogado['idperfil'] ?? null;
 $idUsuario     = $usuarioLogado['id_usuario'] ?? null;
 
+
 // ── INSIRA O SEU LINK DO TELEGRAM AQUI ──
-$TELEGRAM_LINK = "https://t.me/donaldo258";
+$TELEGRAM_LINK = "https://t.me/xxxx";
 
 // ── Registrar visualização (POST AJAX) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_visualizacao'])) {
@@ -109,7 +111,7 @@ $total_encontrados = count($videos);
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
-
+<script src="https://www.paypal.com/sdk/js?client-id=<?= htmlspecialchars($paypal_client_id) ?>&currency=USD"></script>
 <!-- SVG favicon: faceted diamond on dark background -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a0a0f'/%3E%3Cpath d='M32 8 L56 26 L46 56 L18 56 L8 26 Z' fill='none' stroke='%23d4a843' stroke-width='2' stroke-linejoin='round' opacity='0.5'/%3E%3Cpath d='M32 8 L56 26 L32 38 L8 26 Z' fill='%23d4a843' opacity='0.9'/%3E%3Cpath d='M32 38 L56 26 L46 56 Z' fill='%23b8861e' opacity='0.75'/%3E%3Cpath d='M32 38 L8 26 L18 56 Z' fill='%23c49430' opacity='0.6'/%3E%3Cpath d='M32 38 L46 56 L18 56 Z' fill='%238a6010' opacity='0.5'/%3E%3Cellipse cx='32' cy='28' rx='5' ry='3' fill='white' opacity='0.15' transform='rotate(-15 32 28)'/%3E%3C/svg%3E">
 
@@ -694,6 +696,66 @@ body {
 .empty-state i { font-size: 3rem; margin-bottom: 16px; color: var(--border); }
 .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
 
+#paypalModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(10px);
+    align-items: center;
+    justify-content: center;
+}
+#paypalModal.open { display: flex !important; }
+.paypal-modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: var(--shadow);
+}
+.paypal-modal-box h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+.paypal-modal-box .pm-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 20px;
+}
+.paypal-modal-box .pm-video-name {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+#paypal-button-container { min-height: 50px; }
+.pm-cancel {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.pm-cancel:hover { color: var(--text); }
+#paypal-error-msg {
+    display: none;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    text-align: center;
+}
+
+
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
     .hero { padding: 40px 20px 32px; }
@@ -903,10 +965,11 @@ body {
                                 <i class="fab fa-telegram"></i> Telegram
                             </a>
                         </div>
-                        <a href="<?= $link_telegram ?>" target="_blank" rel="noopener"
-                           class="action-btn btn-buy">
-                            <i class="fas fa-bolt"></i> Buy Now — $<?= number_format($v['preco'], 2) ?>
-                        </a>
+                      <button
+    class="action-btn btn-buy"
+    onclick="abrirPayPal(<?= $v['id_video'] ?>, '<?= addslashes($v['nome_video']) ?>', <?= $v['preco'] ?>)">
+    <i class="fab fa-paypal"></i> PayPal — $<?= number_format($v['preco'], 2) ?>
+</button>
                     </div>
                 </div>
             </div>
@@ -939,7 +1002,118 @@ body {
     </div>
 </div>
 
+<div id="paypalModal">
+    <div class="paypal-modal-box">
+        <h3 id="pm-title">Complete your purchase</h3>
+        <div class="pm-video-name" id="pm-video-name"></div>
+        <div class="pm-price" id="pm-price"></div>
+        <div id="paypal-button-container"></div>
+        <div id="paypal-error-msg">
+            <i class="fas fa-circle-exclamation"></i>
+            Payment not completed. Please try again.
+        </div>
+        <div class="pm-cancel" onclick="fecharPayPal()">
+            <i class="fas fa-xmark"></i> Cancel and go back
+        </div>
+    </div>
+</div>
+
 <script>
+
+    let paypalButtons = null;
+
+function abrirPayPal(idVideo, nomeVideo, preco) {
+    document.getElementById('pm-video-name').textContent = nomeVideo;
+    document.getElementById('pm-price').textContent      = '$' + parseFloat(preco).toFixed(2);
+    document.getElementById('paypal-error-msg').style.display = 'none';
+    document.getElementById('paypalModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Limpar botões anteriores se existirem
+    document.getElementById('paypal-button-container').innerHTML = '';
+    if (paypalButtons) {
+        paypalButtons.close();
+        paypalButtons = null;
+    }
+
+    paypalButtons = paypal.Buttons({
+        // 1. Criar ordem no backend
+        createOrder: async function () {
+            try {
+                const res = await fetch('/paypal/create-order.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_video: idVideo }),
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                return data.id; // order ID do PayPal
+            } catch (err) {
+                console.error('createOrder error:', err);
+                mostrarErroPayPal();
+            }
+        },
+
+        // 2. Após aprovação do utilizador — capturar
+        onApprove: async function (data) {
+            try {
+                // Redireciona para o capture, que trata de tudo e redireciona para Telegram
+                window.location.href = '/paypal/capture-order.php?token=' + data.orderID;
+            } catch (err) {
+                console.error('onApprove error:', err);
+                mostrarErroPayPal();
+            }
+        },
+
+        // 3. Cancelamento
+        onCancel: function () {
+            fecharPayPal();
+        },
+
+        // 4. Erro no widget PayPal
+        onError: function (err) {
+            console.error('PayPal error:', err);
+            mostrarErroPayPal();
+        },
+
+        // Estilo do botão
+        style: {
+            layout: 'vertical',
+            color:  'gold',
+            shape:  'rect',
+            label:  'paypal',
+        },
+    });
+
+    paypalButtons.render('#paypal-button-container');
+}
+
+function fecharPayPal() {
+    document.getElementById('paypalModal').classList.remove('open');
+    document.body.style.overflow = 'auto';
+    document.getElementById('paypal-button-container').innerHTML = '';
+    if (paypalButtons) {
+        paypalButtons.close();
+        paypalButtons = null;
+    }
+}
+
+function mostrarErroPayPal() {
+    document.getElementById('paypal-error-msg').style.display = 'block';
+}
+
+// Mensagem de feedback após retorno
+window.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    if (payment === 'cancelled') {
+        alert('Payment cancelled. You can try again at any time.');
+    } else if (payment === 'failed') {
+        alert('Payment failed. Please try again or contact support.');
+    } else if (payment === 'error') {
+        alert('A technical error occurred. Please try again.');
+    }
+});
 // ── Toast ──
 function dismissToast() {
     const toast = document.getElementById('infoToast');
