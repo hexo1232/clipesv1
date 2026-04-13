@@ -83,20 +83,20 @@ if (!empty($_GET['preco_max'])) {
     $filtros[] = floatval($_GET['preco_max']);
 }
 
-// ── Paginação ──
-$limite       = 12;
-$pagina_atual = max(1, (int)($_GET['pagina'] ?? 1));
-$offset       = ($pagina_atual - 1) * $limite;
+// // ── Paginação ──
+// $limite       = 12;
+// $pagina_atual = max(1, (int)($_GET['pagina'] ?? 1));
+// $offset       = ($pagina_atual - 1) * $limite;
 
-// ── Contagem total ──
-$stmt_count = $conexao->prepare("SELECT COUNT(*) " . $sql_base);
-$stmt_count->execute($filtros);
-$total_registros = (int) $stmt_count->fetchColumn();
-$total_paginas   = ceil($total_registros / $limite);
+// // ── Contagem total ──
+// $stmt_count = $conexao->prepare("SELECT COUNT(*) " . $sql_base);
+// $stmt_count->execute($filtros);
+// $total_registros = (int) $stmt_count->fetchColumn();
+// $total_paginas   = ceil($total_registros / $limite);
 
 // ── Buscar vídeos ──
-$stmt = $conexao->prepare("SELECT v.*, vi.caminho_imagem " . $sql_base . " ORDER BY v.data_cadastro DESC LIMIT ? OFFSET ?");
-$stmt->execute(array_merge($filtros, [$limite, $offset]));
+$stmt = $conexao->prepare("SELECT v.*, vi.caminho_imagem " . $sql_base . " ORDER BY v.data_cadastro DESC");
+$stmt->execute($filtros);
 $videos            = $stmt->fetchAll();
 $total_encontrados = count($videos);
 ?>
@@ -554,7 +554,7 @@ body {
 }
 .btn-buy i { font-size: 1rem; }
 
-/* ── PAGINATION ── */
+/* ── PAGINATION ──
 .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 48px; flex-wrap: wrap; }
 .pagination a {
     display: inline-flex;
@@ -572,7 +572,7 @@ body {
     transition: all 0.2s;
 }
 .pagination a:hover { border-color: var(--gold); color: var(--gold); }
-.pagination a.active { background: var(--gold); border-color: var(--gold); color: #0a0a0f; }
+.pagination a.active { background: var(--gold); border-color: var(--gold); color: #0a0a0f; } */
 
 /* ── MODAL ── */
 .modal {
@@ -976,19 +976,7 @@ body {
         <?php endforeach; ?>
     </div>
 
-    <?php if ($total_paginas > 1): ?>
-        <div class="pagination">
-            <?php for ($i = 1; $i <= $total_paginas; $i++):
-                $params           = $_GET;
-                $params['pagina'] = $i;
-                $url              = '?' . http_build_query($params);
-            ?>
-                <a href="<?= $url ?>" class="<?= $i == $pagina_atual ? 'active' : '' ?>">
-                    <?= $i ?>
-                </a>
-            <?php endfor; ?>
-        </div>
-    <?php endif; ?>
+
 
 </div>
 
