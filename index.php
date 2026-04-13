@@ -1007,6 +1007,18 @@ body {
         <h3 id="pm-title">Complete your purchase</h3>
         <div class="pm-video-name" id="pm-video-name"></div>
         <div class="pm-price" id="pm-price"></div>
+
+        <div style="background:rgba(212,168,67,0.07);border:1px solid rgba(212,168,67,0.18);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:0.82rem;color:var(--muted);line-height:1.6;">
+            <div style="font-weight:700;color:var(--gold);margin-bottom:8px;font-size:0.85rem;">
+                <i class="fas fa-circle-info" style="margin-right:5px;"></i> How does it work?
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+                <span><i class="fab fa-paypal" style="color:var(--gold);width:16px;"></i> Click the PayPal button and complete your payment securely.</span>
+                <span><i class="fab fa-telegram" style="color:var(--gold);width:16px;"></i> After payment, you'll be automatically redirected to our Telegram.</span>
+                <span><i class="fas fa-bolt" style="color:var(--gold);width:16px;"></i> Share your transaction ID and receive your video access instantly.</span>
+            </div>
+        </div>
+
         <div id="paypal-button-container"></div>
         <div id="paypal-error-msg">
             <i class="fas fa-circle-exclamation"></i>
