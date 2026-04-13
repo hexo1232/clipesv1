@@ -111,7 +111,7 @@ $total_encontrados = count($videos);
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="css/basico.css">
-<script src="https://www.paypal.com/sdk/js?client-id=<?= htmlspecialchars($paypal_client_id) ?>&currency=USD&debug=true"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=<?= htmlspecialchars($paypal_client_id) ?>&currency=USD"></script>
 <!-- SVG favicon: faceted diamond on dark background -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a0a0f'/%3E%3Cpath d='M32 8 L56 26 L46 56 L18 56 L8 26 Z' fill='none' stroke='%23d4a843' stroke-width='2' stroke-linejoin='round' opacity='0.5'/%3E%3Cpath d='M32 8 L56 26 L32 38 L8 26 Z' fill='%23d4a843' opacity='0.9'/%3E%3Cpath d='M32 38 L56 26 L46 56 Z' fill='%23b8861e' opacity='0.75'/%3E%3Cpath d='M32 38 L8 26 L18 56 Z' fill='%23c49430' opacity='0.6'/%3E%3Cpath d='M32 38 L46 56 L18 56 Z' fill='%238a6010' opacity='0.5'/%3E%3Cellipse cx='32' cy='28' rx='5' ry='3' fill='white' opacity='0.15' transform='rotate(-15 32 28)'/%3E%3C/svg%3E">
 
