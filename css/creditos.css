@@ -1,0 +1,65 @@
+        /* Estilos inline adicionais para garantir que o crédito fique bonito */
+        .developer-credit {
+            margin-top: 10px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .developer-link {
+            color: #4ade80; /* Verde estilo WhatsApp claro */
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        .developer-link:hover {
+            color: #25D366; /* Verde WhatsApp oficial no hover */
+            text-decoration: underline;
+        }
+        /* =======================================================
+   ESTILO PARA O CRÉDITO FLUTUANTE ("POWERED BY" STYLE)
+========================================================== */
+.floating-credit-fab {
+    /* Posição Fixa para flutuar sobre a página */
+    position: fixed;
+    bottom: 25px; /* Posição a partir do fundo */
+    right: 25px; /* Posição a partir da direita */
+    z-index: 9999; /* Garante que fica sempre por cima de outros elementos */
+
+    /* Estilo Visual (Similar ao da imagem) */
+    background-color: white;
+    color: #444; /* Cor do texto padrão */
+    padding: 8px 15px;
+    border-radius: 50px; /* Cantos arredondados */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra para destacar */
+    text-decoration: none; /* Remove sublinhado do link */
+    font-size: 14px;
+    font-weight: 500;
+    display: flex; /* Permite alinhar o ícone e o texto */
+    align-items: center;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.floating-credit-fab:hover {
+    background-color: #f0f0f0;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+.floating-credit-fab .developer-name {
+    margin-left: 5px;
+    font-weight: bold; /* Destacar o nome */
+    color: #89b67f; /* Usar a cor principal do seu tema (se for verde) */
+}
+
+/* Dark Mode Support (ajuste as cores se usar tema escuro) */
+body.dark-mode .floating-credit-fab {
+    background-color: #333;
+    color: #ccc;
+}
+
+body.dark-mode .floating-credit-fab:hover {
+    background-color: #444;
+}
+
+body.dark-mode .floating-credit-fab .developer-name {
+    color: #a4d39c; /* Cor mais clara para o Dark Mode */
+}
+   
