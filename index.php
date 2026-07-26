@@ -1044,6 +1044,11 @@ body {
     box-shadow: var(--shadow);
     padding: 18px;
     animation: toastIn 0.35s ease;
+    pointer-events: none;
+}
+
+#infoToast * {
+    pointer-events: auto;
 }
 
 @keyframes toastIn {
