@@ -262,7 +262,7 @@ body {
 
     <div class="field">
         <label>User</label>
-        <input type="text" name="entrada" placeholder="nome, email ou número" required>
+        <input type="text" name="entrada" placeholder="name, email or number" required>
     </div>
 
     <div class="field">

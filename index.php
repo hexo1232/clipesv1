@@ -1667,9 +1667,11 @@ $nome_video_js    = json_encode($v['nome_video'], JSON_UNESCAPED_SLASHES | JSON_
                             </span>
                         </div>
 
-                      <div class="action-buttons">
+<div class="action-buttons">
     <div class="action-row">
 <button type="button" onclick='abrirPreview(<?= (int)$v["id_video"] ?>)' class="action-btn btn-preview">
+    <i class="fas fa-play"></i> Preview
+</button>
 
 <button
     type="button"
